@@ -1,0 +1,77 @@
+### Main title of the problem
+Main title - Units (F,L)
+
+### Main parameters
+ 9475 # nelem (n. of elements in the mesh)
+ 9112 # npoin (n. of points in the mesh)
+    0 # nvfix (n. of points with fixed degrees of freedom)
+    1 # ncase (n. of load cases)
+    3 # nselp (n. of sets of element parameters)
+    2 # nmats (n. of sets of material properties)
+   13 # nspen (n. of sets of element nodal properties)
+    3 # nmdim (n. of geometric dimensions)
+    0 # nnscs (n. of nodes with specified coordinate systems)
+    0 # nsscs (n. of sets of specified coordinate systems)
+    0 # nncod (n. of nodes with constrained d.o.f.)
+    0 # nnecc (n. of nodes with eccentric connections)
+
+### Sets of element parameters
+# iselp
+      1
+# element parameters
+    7 # ntype (n. of element type)
+    2 # nnode (n. of nodes per element)
+    1 # ngauq (n. of Gaussian quadrature) (stiffness)
+    2 # ngaus (n. of Gauss points in the formulation) (stiffness)
+    1 # ngstq (n. of Gaussian quadrature) (stresses)
+    2 # ngstr (n. of Gauss points in the formulation) (stresses)
+# iselp
+      2
+# element parameters
+    9 # ntype (n. of element type)
+    3 # nnode (n. of nodes per element)
+    3 # ngauq (n. of Gaussian quadrature) (stiffness)
+    3 # ngaus (n. of Gauss points in the formulation) (stiffness)
+    3 # ngstq (n. of Gaussian quadrature) (stresses)
+    3 # ngstr (n. of Gauss points in the formulation) (stresses)
+# iselp
+      3
+# element parameters
+    9 # ntype (n. of element type)
+    4 # nnode (n. of nodes per element)
+    1 # ngauq (n. of Gaussian quadrature) (stiffness)
+    2 # ngaus (n. of Gauss points in the formulation) (stiffness)
+    1 # ngstq (n. of Gaussian quadrature) (stresses)
+    2 # ngstr (n. of Gauss points in the formulation) (stresses)
+
+### Sets of material properties
+### (Young modulus, Poisson ratio, mass/volume and thermic coeff.
+###  Modulus of subgrade reaction, normal and shear stifness)
+# imats         young        poiss        dense        alpha
+      1     33000000.0     0.2     2.5485377     1e-05
+# imats         young        poiss        dense        alpha
+      2     210000000.0     0.3     7.84904737995992     1.17e-05
+
+### Sets of element nodal properties
+# ispen
+      1
+# inode       barea        binet        bin2l        bin3l        bangl(deg)
+      1        0.01       1.0e-3      1.0e-3        1.0e-4     0.0
+      2        0.01       1.0e-3      1.0e-3        1.0e-4     0.0
+# ispen
+      2
+# inode       thick
+      1        0.25
+      2        0.25
+      3        0.25
+# ispen
+      3
+# inode       thick
+      1        0.25
+      2        0.25
+      3        0.25
+      4        0.25
+
+### Element parameter index, material properties index, element nodal
+### properties index and list of the nodes of each element
+# ielem ielps matno ielnp       lnods ...

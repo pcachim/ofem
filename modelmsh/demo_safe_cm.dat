@@ -1,0 +1,29 @@
+### Main title
+Main title of the problem
+
+### Number of combinations
+     2 # ncomb (number of combinations)
+
+### Combination title 
+1.35G+1.5Q
+### Combination number
+# combination n. (icomb) and number off load cases in combination (ncase)
+# icomb    lcase
+      1        1 
+### Coeficients
+# load case number (icase) and load coefficient (vcoef)
+# icase      vcoef
+      1       1.35
+
+### Combination title 
+G+Q
+### Combination number
+# combination n. (icomb) and number off load cases in combination (ncase)
+# icomb    lcase
+      2        1 
+### Coeficients
+# load case number (icase) and load coefficient (vcoef)
+# icase      vcoef
+      1       1.00
+
+END_OF_FILE

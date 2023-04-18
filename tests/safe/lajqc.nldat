@@ -1,0 +1,65 @@
+### Titulo principal do problema
+Laje quadrada com carga no centro (N, mm => MPa)
+
+### Parametros principais do problema
+   nincs =  20 # numero de incrementos do problema
+   nalgo =   0 # tipo de algoritmo de solucao (metodo de N.-R. modificado)
+   nmatn =   2 # numero de materiais distintos
+   nsect =   1 # numero de seccoes
+   narcl =   1 # tipo de método do arco
+   nsear =   0 # line-search
+   nstar =   0 # parametro de recomeco
+
+### Descricao das seccoes
+# isect   nlayr
+      1      10
+# ilayr   width    heigh   imatn
+      1     1.0      5.0       1
+      2     1.0      5.0       1
+      3     1.0      5.0       1
+      4     1.0      6.0       1
+      5     1.0      6.5       1
+      6     1.0      6.5       1
+      7     1.0      6.0       1
+      8     1.0      5.0       1
+      9     1.0      5.0       1
+     10     1.0      5.0       1
+
+### Descricao dos materiais
+## imats  matno
+       1      5
+#      Ec      u     alpha   fck       Gc      fctm        Gf
+   36000.0   0.17   1.0e-6   30.0     300.0   6.0        6.5
+## imats  matno
+       2      2
+#      Kn     fsm
+     0.070    1.50
+
+### Tolerancias para o 'return mapping'
+# miter   tolrF    tolrR      tolrS
+     20  1.0e-6   1.0e-5     1.0e-5
+
+### Descrição dos Incrementos
+# iincs  lcase  dfact  toler  miter
+      1      1   10.0  2.50     10
+      2      1   10.0  2.50     10
+      3      1   10.0  2.50     10
+      4      1    5.0  2.50     10
+      5      1    5.0  2.50     10
+      6      1    5.0  2.50     10
+      7      1    5.0  2.50     10
+      8      1    5.0  2.50     10
+      9      1    5.0  2.50     10
+     10      1    5.0  2.50     10
+     11      1   10.0  2.50     10
+     12      1   10.0  2.50     10
+     13      1   10.0  2.50     10
+     14      1    5.0  2.50     10
+     15      1    5.0  2.50     10
+     16      1    5.0  2.50     10
+     17      1    5.0  2.50     10
+     18      1    5.0  2.50     10
+     19      1    5.0  2.50     10
+     20      1    5.0  2.50     10
+
+END_OF_FILE

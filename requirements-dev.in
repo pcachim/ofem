@@ -1,0 +1,5 @@
+pip-tools >= 6.9.0
+mkdocs
+mkdocstrings[python]
+mkdocs-material
+
