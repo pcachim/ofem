@@ -66,7 +66,7 @@ gmsh_meshio = {v: k for k, v in meshio_gmsh.items()}
 
 meshio_femix = {
     "line": (7, 2, 1, 1, 2, 1, 2),
-    "triangle": (9, 3, 1, 3, 3, 3, 1),
+    "triangle": (9, 3, 1, 3, 1, 3, 1),
     "quad": (9, 4, 1, 1, 2, 1, 2),
     "tetra": (4, 4, 0, 1, 2, 1, 2),
     "hexahedron": (4, 8, 0, 1, 2, 1, 2),

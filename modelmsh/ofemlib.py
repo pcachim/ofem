@@ -88,6 +88,116 @@ ofemfilessuffix = ['.gldat', '.cmdat', '.log', '.nldat', '.srdat',
                 '_gpstr.csv', '_react.csv', '_fixfo.csv', '_csv.info']
 
 
+class ofemfile:
+    def __init__(self, filename: str, overwrite: bool=False):
+        path = pathlib.Path(filename)
+        suffix = path.suffix.lower()
+        if suffix == ".ofem":
+            self.file = str(path.with_name(path.stem))
+            self.path = path
+        else:
+            self.file = str(path)
+            self.path = path.with_suffix('.ofem')
+
+        self.filename = str(self.path)
+
+        if overwrite and self.path.exists():
+            path.unlink()
+
+        self.jobname = self.path.stem
+        self.ofemfile = zipfile.ZipFile(self.filename, 'a')
+        self.files = self.ofemfile.namelist()
+        self.ofemfile.close()
+        self.codes = [DI_CSV, EST_CSV, AST_CSV]
+
+    def pack(self):
+        with zipfile.ZipFile(self.filename, 'a') as ofem_file:
+            files = ofem_file.namelist()
+
+            for suffix in ofemfilessuffix:
+                fname = self.file + suffix
+                arcname = self.jobname + suffix
+                if pathlib.Path(fname).exists() and arcname not in files:
+                    ofem_file.write(fname, arcname=arcname, compress_type=zipfile.ZIP_DEFLATED)
+                if pathlib.Path(fname).exists():
+                    os.remove(fname)
+
+        return
+
+    def add(self, file_to_add: str):
+        jobname = pathlib.Path(file_to_add).name
+        with zipfile.ZipFile(self.filename, 'a') as ofemfile:
+            ofemfile.write(file_to_add, arcname=jobname, compress_type=zipfile.ZIP_DEFLATED)
+        # self.ofemfile.write(file_to_add, arcname=jobname, compress_type=zipfile.ZIP_DEFLATED)
+        os.remove(file_to_add)
+        return
+
+    def get_csv(self, code: int) -> pd.DataFrame:
+        if code == DI_CSV:
+            file_to_extract = pathlib.Path(self.filename + '_di.csv')
+        elif code == EST_CSV:
+            file_to_extract = pathlib.Path(self.filename + '_elnst.csv')
+        elif code == AST_CSV:
+            file_to_extract = pathlib.Path(self.filename + '_avgst.csv')
+
+        with zipfile.ZipFile(self.filename, 'r') as ofem_file:
+            with ofem_file.open(file_to_extract.name) as file:
+                df = pd.read_csv(file, sep=';')
+
+        return df
+
+    def get_pva(self, code: int) -> pd.DataFrame:
+        if code == DI_PVA:
+            file_to_extract = pathlib.Path(self.filename + '_di.pva')
+        elif code == ST_PVA:
+            file_to_extract = pathlib.Path(self.filename + '_st.pva')
+        elif code == SR_PVA:
+            file_to_extract = pathlib.Path(self.filename + '_sr.pva')
+
+        with zipfile.ZipFile(self.filename, 'r') as ofem_file:
+            with ofem_file.open(file_to_extract.name) as file:
+                df = pd.read_csv(file, sep='\s+', header=None)
+                df.columns = ['point', 'values']
+
+        return df
+
+    def delete_files(self):
+        for suffix in ofemfilessuffix:
+            fname = self.filename + suffix
+            if pathlib.Path(fname).exists():
+                os.remove(fname)
+        return
+
+    def clean(self):
+        path = pathlib.Path(self.filename)
+        if path.exists():
+            path.unlink()
+        self.ofemfile = zipfile.ZipFile(self.filename + '.ofem', 'a')
+        self.ofemfile.close()
+        return
+
+    def unpack(self):
+        with zipfile.ZipFile(self.filename, 'r') as ofem_file:
+            ofem_file.extractall(self.path.parent)
+        return
+
+    def unpack_bin(self):
+        with zipfile.ZipFile(self.filename, 'r') as ofem_file:
+            # listOfFileNames = ofemfile.namelist()
+            for fileName in ofem_file.namelist():
+                if fileName.endswith('.bin'):
+                    ofem_file.extract(fileName, self.path.parent)
+        return
+    
+    def unpack_dat(self):
+        with zipfile.ZipFile(self.filename, 'r') as ofem_file:
+            # listOfFileNames = ofemfile.namelist()
+            for fileName in ofem_file.namelist():
+                if fileName.endswith('dat'):
+                    ofem_file.extract(fileName, self.path.parent)
+        return  
+
+
 def compress_ofem(filename: str):
     """_summary_
 
@@ -121,7 +231,7 @@ def add_to_ofem(filename: str, file_to_add: str):
     Returns:
         error code: 0 if no error, 1 if error
     """""""""
-    jobname = pathlib.Path(filename).name
+    jobname = pathlib.Path(file_to_add).name
     with zipfile.ZipFile(filename + '.ofem', 'a') as ofemfile:
         ofemfile.write(file_to_add, arcname=jobname, compress_type=zipfile.ZIP_DEFLATED)
 
@@ -259,12 +369,12 @@ def posfemix2(filename: str, code: int=1, lcaco: str='l', cstyn: str='y',
         cstyn = 'n'
         print("\n'cstyn' must be 'y'es or 'n'o. 'cstyn' changed to 'y")
 
-    n = posfemixlib(filename.encode(), c_int(code), 
+    n = posofemlib(filename.encode(), c_int(code), 
                     lcaco.encode(), cstyn.encode(), stnod.encode(), csryn.encode())
     return n
 
 
-def ofemResults(filename: str, codes: list, **kwargs):
+def ofemResults(filename:str, codes: list, **kwargs):
     """_summary_
 
     Args:
@@ -273,8 +383,10 @@ def ofemResults(filename: str, codes: list, **kwargs):
     Returns:
         error code: 0 if no error, 1 if error
     """""""""
-    
-    extract_ofem_bin(filename)
+
+    ofem_file = ofemfile(filename)
+    ofem_file.unpack_bin()
+    # extract_ofem_bin(filename)
 
     if 'lcaco' not in kwargs:
         lcaco = 'l'
@@ -349,7 +461,7 @@ def ofemResults(filename: str, codes: list, **kwargs):
 
     # Pass a pointer to the integer object to the C function
     myarray = (c_int * len(codes))(*codes)
-    n = posofemlib(filename.encode(), c_int(ncode), myarray,
+    n = posofemlib(ofem_file.file.encode(), c_int(ncode), myarray,
                     lcaco.encode(), cstyn.encode(), 
                     stnod.encode(), csryn.encode(), 
                     c_int(ksres), c_int(kstre), c_int(kdisp))
@@ -363,10 +475,11 @@ def ofemResults(filename: str, codes: list, **kwargs):
     os.dup2(stdout_save, stdout_fileno)
     os.close(stdout_save)
 
-    with open(filename + '.log', 'a') as file:
+    with open(ofem_file.file + '.log', 'a') as file:
         file.write(captured_stdout)
 
-    compress_ofem(filename)
+    ofem_file.pack()
+    # compress_ofem(filename)
     #add_to_ofem(filename)
 
     return captured_stdout
@@ -383,9 +496,13 @@ def ofemSolver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
     Returns:
         error code: 0 if no error, 1 if error
     """
+    
+    ofem_file = ofemfile(filename)
+    ofem_file.unpack_dat()
+    ofem_file.delete_files()
 
-    extract_ofem_dat(filename)
-    delete_ofem(filename)
+    # extract_ofem_dat(filename)
+    # delete_ofem(filename)
 
     soalg = soalg.lower()
     if soalg not in ['d', 'i']:
@@ -411,8 +528,8 @@ def ofemSolver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
     t = threading.Thread(target=drain_pipe)
     t.start()
 
-    n = preofemlib(filename.encode())
-    n = ofemlib(filename.encode(), soalg.encode(), c_double(randsn))
+    n = preofemlib(ofem_file.file.encode())
+    n = ofemlib(ofem_file.file.encode(), soalg.encode(), c_double(randsn))
     print()
 
     # Close the write end of the pipe to unblock the reader thread and trigger it to exit
@@ -424,10 +541,11 @@ def ofemSolver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
     os.dup2(stdout_save, stdout_fileno)
     os.close(stdout_save)
 
-    with open(filename + '.log', 'a') as file:
+    with open(ofem_file.file + '.log', 'a') as file:
         file.write(captured_stdout)
 
-    compress_ofem(filename)
+    ofem_file.pack()
+    # compress_ofem(filename)
 
     return captured_stdout
 
@@ -444,8 +562,11 @@ def ofemnlSolver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
         error code: 0 if no error, 1 if error
     """
 
-    extract_ofem_dat(filename)
-    delete_ofem(filename)
+    ofem_file = ofemfile(filename)
+    ofem_file.unpack_dat()
+    ofem_file.delete_files()
+    # extract_ofem_dat(filename)
+    # delete_ofem(filename)
 
     soalg = soalg.lower()
     if soalg not in ['d', 'i']:
@@ -487,7 +608,8 @@ def ofemnlSolver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
     with open(filename + '.log', 'a') as file:
         file.write(captured_stdout)
 
-    compress_ofem(filename)
+    ofem_file.pack()
+    # compress_ofem(filename)
 
     return captured_stdout
 

@@ -23,6 +23,9 @@ POLYGON = 7
 LINEAR2D = 101
 CURVED2D = 102
 SPATIAL3D = 103
+FRAME2D = 112
+FRAME3D = 113
+BUILDING3D = 120
 
 # supports
 FREE = -1
@@ -215,8 +218,7 @@ def CurvedBeam(points: tuple, msize: float = 0.3):
     k = gmsh.model.geo.addPoint(0.0, 0.0, 0.0, msize)
     pt.append(k)
     for i in range(len(points)):
-        len += points[i]
-        k = gmsh.model.geo.addPoint(len, 0.0, 0.0, msize)
+        k = gmsh.model.geo.addPoint(points[i][0], points[i][1], 0.0, msize)
         pt.append(k)
 
     for i in range(len(points)):
@@ -323,10 +325,13 @@ class Slab:
             mesh_file (str): the name of the file to be written
         """
         ndime = 3
-        
+
         path = pathlib.Path(mesh_file)
         if path.suffix.lower() != ".gldat":
             mesh_file = path.with_suffix('').resolve() + ".gldat"
+
+        jobname = str(path.parent / (path.stem + ".ofem"))
+        ofem_file = ofemlib.ofemfile(jobname, overwrite=True)
 
         nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(2, includeBoundary=True)
         coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))
@@ -461,9 +466,9 @@ class Slab:
             file.write("END_OF_FILE\n")
 
         if path.suffix.lower() == ".gldat":
-            mesh_file = str(path.parent / path.stem) + ".cmdat"
+            combo_file = str(path.parent / path.stem) + ".cmdat"
         
-        with open(mesh_file, 'w') as file:
+        with open(combo_file, 'w') as file:
 
             file.write("### Main title of the problem\n")
             file.write("Slab mesh\n")
@@ -498,6 +503,9 @@ class Slab:
             file.write("END_OF_FILE\n")
 
         jobname = str(path.parent / path.stem)
+
+        ofem_file.add(mesh_file)
+        ofem_file.add(combo_file)
         txt = ofemlib.ofemSolver(jobname)
 
         options = {'csryn': 'n', 'ksres': 2, 'lcaco': 'c'}
@@ -630,6 +638,9 @@ class Beam:
         path = pathlib.Path(mesh_file)
         if path.suffix.lower() != ".gldat":
             mesh_file = path.with_suffix('').resolve() + ".gldat"
+
+        jobname = str(path.parent / (path.stem + ".ofem"))
+        ofem_file = ofemlib.ofemfile(jobname, overwrite=True)
 
         nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(1, includeBoundary=True)
         coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))

@@ -5,12 +5,13 @@
 python3 -m venv .venv \
 source .venv/bin/activate
 
+pip install --upgrade pip
 pip install pip-tools
 
 ## Install requirements for development
 
-pip-compile ./dev-requirements.in \
-pip-sync dev-requirements.txt
+pip-compile ./requirements-dev.in \
+pip-sync requirements-dev.txt
 
 ## Install requirements for produuction
 
