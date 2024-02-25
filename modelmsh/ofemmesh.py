@@ -16,6 +16,7 @@ class ofem_handler:
 
     def __init__(self):
         self._points: pd.DataFrame = pd.DataFrame(columns=['tag', 'numtag', 'x', 'y', 'z'])
+        self.points: dict = {}
         self._elements: pd.DataFrame = pd.DataFrame(columns=['tag', 'numtag', 'type', 'nnodes', 'nodes', 'section', 'group'])
         self._info: dict = {}
         self._specialnodes: pd.DataFrame  = pd.DataFrame(columns=['tag', 'node', 'fixed'])
@@ -29,6 +30,10 @@ class ofem_handler:
         self._solidloads: list = []
         self._combinations: list = []
         self_gmsh = None
+
+    def add_points(self, newpoints: dict):
+        self.points.update(newpoints)
+        return
 
     def read_mesh(self, mesh_file):
         self._mesh = meshio.read(mesh_file)

@@ -4,9 +4,13 @@ import os
 import logging
 import pathlib
 from modelmsh import ofemlib
+from pathlib import Path
 
 
 logging.basicConfig(level=logging.DEBUG)
+
+print(os.path.expanduser('~/desktop'))
+print(Path.home())
 
 # Test ofem
 fname = os.path.join( os.getcwd(), "tests/cyl2")
@@ -15,6 +19,7 @@ msh.ofemSolver(fname, 'd', 1.0e-6)
 options = {'csryn': 'n', 'ksres': 2, 'lcaco': 'c'}
 codes = [msh.ofemlib.DI_CSV, msh.ofemlib.AST_CSV, msh.ofemlib.EST_CSV]
 msh.ofemResults(fname, codes, **options)
+
 
 # Test ofemnl
 # fname = os.path.join( os.getcwd(), "tests/cyl2")
@@ -54,8 +59,9 @@ slab.run()
 # beam.run()
 
 fname = os.path.join( os.getcwd(), "tests/test.s2k")
+# fname = os.path.join( os.getcwd(), "tests/test.xlsx")
 s2000 = msh.sap2000_handler(fname)
-s2000.to_femix()
+# s2000.to_femix()
 # fname = os.path.join( os.getcwd(), "test.xlsx")
 # s2000.read_excel(fname, 'pandas')
 s2000.to_msh_and_open(entities='sections', physicals='sections')

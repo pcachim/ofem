@@ -5,6 +5,7 @@ import openpyxl
 import numpy as np
 import pandas as pd
 import pathlib
+from itertools import islice
 from pathlib import Path
 import sys
 import logging
@@ -33,7 +34,6 @@ LINE = 1
 CURVE = 1
 SURFACE = 2
 VOLUME = 3
-
 
 colors = {
     "elements": 1,
@@ -170,7 +170,7 @@ def read_s2k(filename: str) -> dict:
     return s2k
 
 
-def read_excel(self, filename: str) -> dict:
+def read_excel(filename: str) -> dict:
     """Reads a SAP2000 excel file
 
     Args:
@@ -181,16 +181,32 @@ def read_excel(self, filename: str) -> dict:
         *varies*: the database of the SAP2000 excel file as a pandas dataframe or a xl object
     """
 
-    s2k = pd.read_excel(filename, sheet_name=None, skiprows=lambda x: x in [0, 2])
-    for df in s2k:
-        s2k[df.upper()] = s2k[df]
+    # Iterate over each sheet
+    titles = {}
+    dataframes = {}
 
-    # if out.lower() == 'openpyxl' or out.lower() == 'xl':
-    #     xlsx = openpyxl.load_workbook(filename)
-    # else:
-    #     xlsx = self.s2kDatabase
-        
-    return s2k
+    # Load the Excel file
+    workbook = openpyxl.load_workbook(filename)
+    # Get all sheet names
+    sheet_names = workbook.sheetnames
+
+    for sheet_name in sheet_names:
+        # Access the sheet by name
+        sheet = workbook[sheet_name]
+        title = str(sheet["A1"].value).replace("TABLE:  ","").upper()
+        titles[sheet_name] = title
+
+    workbook.close()
+
+    # Read all sheets from the Excel file
+    excel_data = pd.read_excel(filename, sheet_name=None, skiprows=[0, 2])
+
+    # Assign each sheet to a dataframe in the dictionary
+    for sheet_name, sheet_data in excel_data.items():
+        dataframes[titles[sheet_name]] = sheet_data
+
+    return dataframes
+
 
 class sap2000_handler:
     
@@ -216,7 +232,7 @@ class sap2000_handler:
             print("You must export table 'Joint Coordinates' from SAP2000\n")
             return False
         self._njoins = joints.shape[0]
-        self.pn = dict(zip(self.joints['Joint'], np.arange(1, self.njoins+1)))
+        self.pn = dict(zip(joints['Joint'], np.arange(1, self.njoins+1)))
         self.joints['Joint'] = joints['Joint'].astype(str)
         # print(self.s2k['JOINT COORDINATES'].head())
 
@@ -343,14 +359,12 @@ class sap2000_handler:
     def sections(self):
         return self._sections
 
-
     def get_table(self, tabletitle):
         tabletitle = ""
         try:
             return self.s2k[tabletitle]
         except KeyError as error:
             return None
-
 
     def to_femix(self):
         """Writes a femix .gldat mesh file
@@ -486,8 +500,8 @@ class sap2000_handler:
             file.write("### Element parameter index, material properties index, element nodal\n")
             file.write("### properties index and list of the nodes of each element\n")
             file.write("# ielem ielps matno ielnp       lnods ...\n")
-            for elem in self.elements.itertuples():
-                file.write(" %6d %5d %5d " % (elem.tag, elem.material, elem.material))
+            for elem in self.frames.itertuples():
+                file.write(" %6d %5d %5d " % (elem.ElemTag, elem.material, elem.material))
                 if (elem.nodals == 1):
                     file.write(" %5d    " % elem.section)
                 else:
@@ -643,7 +657,6 @@ class sap2000_handler:
 
         return
 
-
     def to_msh(self, model: str = 'geometry', entities: str = 'types', physicals: str = ''):
         """Writes a GMSH mesh file and opens it in GMSH
 
@@ -676,7 +689,7 @@ class sap2000_handler:
         joints = self.s2k['Joint Coordinates'.upper()]
         elems = self.s2k['Connectivity - Frame'.upper()]
         areas = self.s2k['Connectivity - Area'.upper()]
-        sect = self.s2k['Frame Props 01 - General'.upper()]
+        sect = self.s2k['Frame Section Properties 01 - General'.upper()]
         sectassign = self.s2k['Frame Section Assignments'.upper()]
         areasect = self.s2k['Area Section Properties'.upper()]
         areaassign = self.s2k['Area Section Assignments'.upper()]
@@ -813,7 +826,7 @@ class sap2000_handler:
             gmsh.model.mesh.addNodes(POINT, point, ijoins, lst1)
 
         logging.debug("Processing GMSH intialization...")
-        
+
         gmsh.model.setAttribute("Materials", ["Concrete:Stiff:30000000",  "Concrete:Poiss:0.2", "Steel:Stiff:20000000", "Steel:Poiss:0.3"])
 
         gmsh.option.setNumber("Mesh.SaveAll", 1)
@@ -828,7 +841,6 @@ class sap2000_handler:
         gmsh.finalize()
 
         return self._filename + ".msh"
-
 
     def to_msh_and_open(self, model: str = 'geometry', entities: str = 'types', physicals: str = ''):
 
@@ -846,7 +858,6 @@ class sap2000_handler:
             gmsh.fltk.run()
 
         gmsh.finalize()
-
 
     def copy(self):
         return copy.deepcopy(self)

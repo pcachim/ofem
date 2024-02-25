@@ -520,7 +520,7 @@ class Slab:
             gmsh.view.addHomogeneousModelData(
                     t1, 0, "slab", "NodeData", dff["point"].values, dff['disp-'+str(i)].values) 
             gmsh.view.option.setNumber(t1, "Visible", 0)
-            
+
         t1 = gmsh.view.add("deformed mesh")
         dff = df.loc[df['icomb'] == 1]
         npoin = dff.shape[0]
