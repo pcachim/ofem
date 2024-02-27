@@ -39,14 +39,15 @@ fname = os.path.join( os.getcwd(), "tests/demo.gldat")
 mat = {'E': 30000000, 'nu': 0.3, 'rho': 25.0, 'alpha': 1.0e-5}
 slab = msh.Slab()
 # slab.addGeometry(msh.meshstruct.CIRCULAR_WITH_HOLE, (0, 0, 0), 3, 2, 0.1,
-#                  boundary=[1, -1], material=mat, thick=0.25, load=-10.0)
+#                  boundary=[1, 1], material=mat, thick=0.25, load=-10.0)
 
 # slab.addGeometry(msh.meshstruct.CIRCULAR_QUARTER, (0, 0, 0), 3, 0*math.pi/180, 0.2,
 #                 boundary=[1, 1, 1], material=mat, thick=0.25, load=-10.0)
-#slab.addGeometry(msh.meshstruct.CIRCULAR_SEGMENT, (1, 1, 0), 3, 30*math.pi/180, 70*math.pi/180)
-#slab.addGeometry(msh.meshstruct.CIRCULAR, (1, 1, 0), 3)
-slab.addGeometry(msh.meshstruct.POLYGON, [(0, 0, 0), (10, 0, 0), (10, 5, 0), (0, 5, 0)],
-                    boundary=[1, 1, -1, 1], material=mat, thick=0.25, load=-10.0)
+# slab.addGeometry(msh.meshstruct.CIRCULAR_SEGMENT, (1, 1, 0), 3, 30*math.pi/180, 70*math.pi/180, 
+#                 boundary=[1, 1, 1], material=mat, thick=0.25, load=-10.0)
+slab.addGeometry(msh.meshstruct.CIRCULAR, (1, 1, 0), 3, boundary=[1, 1], material=mat, thick=0.25, load=-10.0)
+# slab.addGeometry(msh.meshstruct.POLYGON, [(0, 0, 0), (10, 0, 0), (10, 5, 0), (0, 5, 0)],
+#                     boundary=[1, 1, -1, 1], material=mat, thick=0.25, load=-10.0)
 slab.getNodes()
 slab.getElements()
 slab.getBoundaries()

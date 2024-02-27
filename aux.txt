@@ -1,0 +1,16 @@
+ofem_tables = [
+"General",
+"CoordinateSystems",
+"Materials",
+"SpringSections",
+"ShellSections",
+"Nodes",
+"ShellElements",
+"Boundaries",
+"NodeBoundaries",
+"Combinations",
+"LoadCases",
+"NodalLoads",
+"Information",
+]
+

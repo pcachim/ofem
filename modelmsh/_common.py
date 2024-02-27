@@ -64,6 +64,28 @@ meshio_gmsh = {
 }
 gmsh_meshio = {v: k for k, v in meshio_gmsh.items()}
 
+ofem_femix = {
+    # ntype, nnode, nsec, gaussq, ngaus, gausqst, ngausqst, 
+    "point": (0, 1, 0, 0, 0, 0, 0),
+    "line2": (7, 2, 1, 1, 2, 1, 2),
+    "line3": (14, 3, 1, 1, 2, 1, 2),
+    "area3": (9, 3, 1, 3, 1, 3, 1), # triangle
+    "area4": (9, 4, 1, 1, 2, 1, 2), # quad
+    "area6": (9, 6, 1, 3, 3, 3, 3), # triangle
+    "area8": (9, 8, 1, 1, 2, 1, 2), # quad
+    "area9": (9, 9, 1, 1, 2, 1, 2), # quad
+    "area10": (9, 10, 1, 3, 3, 3, 3), # triangle
+    "solid4": (4, 4, 0, 1, 2, 1, 2), # tetra
+    "solid5": (4, 5, 0, 1, 2, 1, 2), # pyramid
+    "solid6": (4, 6, 0, 1, 2, 1, 2), # wedge, tetra
+    "solid8": (4, 8, 0, 1, 2, 1, 2), # cube
+    "solid10": (4, 10, 0, 1, 2, 1, 2),
+    "solid14": (4, 14, 0, 1, 2, 1, 2),
+    "solid18": (4, 18, 0, 1, 2, 1, 2),
+    "solid20": (4, 20, 0, 1, 2, 1, 2), # cube
+    "solid27": (4, 27, 0, 1, 2, 1, 2) # cube
+}
+
 meshio_femix = {
     "line": (7, 2, 1, 1, 2, 1, 2),
     "triangle": (9, 3, 1, 3, 1, 3, 1),
