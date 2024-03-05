@@ -1,8 +1,7 @@
-numpy==1.23.4
-pandas==1.5.1
+pandas==2.2.0
 plotly==5.10.0
 matplotlib==3.6.0
 gmsh==4.12.2
-meshio==5.3.4
-openpyxl==3.0.7
-eurocodepy>=0.1.19
+meshio==5.3.5
+openpyxl==3.1.2
+eurocodepy>=0.2.5

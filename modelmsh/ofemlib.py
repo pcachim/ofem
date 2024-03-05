@@ -88,7 +88,7 @@ ofemfilessuffix = ['.gldat', '.cmdat', '.log', '.nldat', '.srdat',
                 '_gpstr.csv', '_react.csv', '_fixfo.csv', '_csv.info']
 
 
-class ofemfile:
+class OfemlibFile:
     def __init__(self, filename: str, overwrite: bool=False):
         path = pathlib.Path(filename)
         suffix = path.suffix.lower()
@@ -384,7 +384,7 @@ def ofemResults(filename:str, codes: list, **kwargs):
         error code: 0 if no error, 1 if error
     """""""""
 
-    ofem_file = ofemfile(filename)
+    ofem_file = OfemlibFile(filename)
     ofem_file.unpack_bin()
     # extract_ofem_bin(filename)
 
@@ -497,7 +497,7 @@ def ofemSolver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
         error code: 0 if no error, 1 if error
     """
     
-    ofem_file = ofemfile(filename)
+    ofem_file = OfemlibFile(filename)
     ofem_file.unpack_dat()
     ofem_file.delete_files()
 
@@ -562,7 +562,7 @@ def ofemnlSolver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
         error code: 0 if no error, 1 if error
     """
 
-    ofem_file = ofemfile(filename)
+    ofem_file = OfemlibFile(filename)
     ofem_file.unpack_dat()
     ofem_file.delete_files()
     # extract_ofem_dat(filename)

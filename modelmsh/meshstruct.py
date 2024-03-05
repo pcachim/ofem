@@ -7,8 +7,8 @@ import numpy as np
 import pathlib
 #import eurocodepy as ec
 from . import ofemlib
-from ._common import *
-from . import msh
+from .common import *
+from . import ofemgmsh
 
 # slabs
 RECTANGULAR = 1
@@ -64,6 +64,31 @@ def Circle(center: tuple, radius: float, msize: float = 0.3):
     gmsh.model.mesh.generate(2)
 
 
+def CircleWithHole2(center: tuple, radius_ext: float,  radius_int: float, msize: float = 0.6):
+    gmsh.model.add("slab")
+    pt1 = gmsh.model.geo.addPoint(center[0], center[1], center[2], msize)
+    pt2 = gmsh.model.geo.addPoint(center[0]+radius_int, center[1], center[2], msize)
+    pt3 = gmsh.model.geo.addPoint(center[0]-radius_int, center[1], center[2], msize)
+    sf1 = gmsh.model.geo.addCircleArc(pt2, pt1, pt3)
+    sf2 = gmsh.model.geo.addCircleArc(pt3, pt1, pt2)
+    circle1 = gmsh.model.geo.addCurveLoop([sf1, sf2])
+    #circ_int = gmsh.model.geo.addPlaneSurface([circle])
+
+    pt1 = gmsh.model.geo.addPoint(center[0], center[1], center[2], msize)
+    pt2 = gmsh.model.geo.addPoint(center[0]+radius_ext, center[1], center[2], msize)
+    pt3 = gmsh.model.geo.addPoint(center[0]-radius_ext, center[1], center[2], msize)
+    sf1 = gmsh.model.geo.addCircleArc(pt2, pt1, pt3)
+    sf2 = gmsh.model.geo.addCircleArc(pt3, pt1, pt2)
+    circle2 = gmsh.model.geo.addCurveLoop([sf1, sf2])
+    circ_out = gmsh.model.geo.addPlaneSurface([circle2, circle1])
+
+
+    gmsh.model.geo.synchronize()
+    # gmsh.option.setNumber("Mesh.ElementOrder", 2)
+    # gmsh.option.setNumber("Mesh.HighOrderOptimize", 2)
+    gmsh.model.mesh.generate(2)
+
+
 def CircleWithHole(center: tuple, radius_ext: float, radius_int: float, msize: float = 0.3):
     gmsh.model.add("slab")
     circ_out = gmsh.model.occ.addDisk(center[0], center[1], center[2], radius_ext, radius_ext)
@@ -72,10 +97,10 @@ def CircleWithHole(center: tuple, radius_ext: float, radius_int: float, msize: f
 
     gmsh.model.occ.synchronize()
 
-    for e in gmsh.model.getEntities(1):
-        gmsh.model.addPhysicalGroup(1, [e[1]], name = "fix: free%d"%e[1])
+    # for e in gmsh.model.getEntities(1):
+    #     gmsh.model.addPhysicalGroup(1, [e[1]], name = "fix: free%d"%e[1])
 
-    gmsh.model.mesh.setSize(gmsh.model.getEntities(-1), msize)
+    # gmsh.model.mesh.setSize(gmsh.model.getEntities(-1), msize)
 
     # gmsh.option.setNumber("Mesh.ElementOrder", 2)
     # gmsh.option.setNumber("Mesh.HighOrderOptimize", 2)
@@ -277,7 +302,7 @@ class Slab:
             CirleQuarter(args[0], args[1], args[2], msize)
         elif geometry == CIRCULAR_WITH_HOLE:
             msize = 0.3 if len(args) < 4 else args[3]
-            CircleWithHole(args[0], args[1], args[2], msize)
+            CircleWithHole2(args[0], args[1], args[2], msize)
         elif geometry == CIRCULAR_SEGMENT:
             msize = 0.3 if len(args) < 5 else args[4]
             CircleSegment(args[0], args[1], args[2], args[3], msize)
@@ -331,10 +356,12 @@ class Slab:
             mesh_file = path.with_suffix('').resolve() + ".gldat"
 
         jobname = str(path.parent / (path.stem + ".ofem"))
-        ofem_file = ofemlib.ofemfile(jobname, overwrite=True)
+        ofem_file = ofemlib.OfemlibFile(jobname, overwrite=True)
 
         nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(2, includeBoundary=True)
         coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))
+        nodelist = dict(zip(nodeTags, np.arange(1, len(nodeTags)+1)))
+        listnode = {v: k for k, v in nodelist.items()}
         # coords = np.array(nodeCoords).reshape(-1, 3)
         # sorted_dict_by_keys = {key: coordlist[key] for key in sorted(coordlist)}
         eleTypes, eleTags, eleNodes = gmsh.model.mesh.getElements(2)
@@ -404,7 +431,8 @@ class Slab:
             for i, elem in enumerate(eleTags[0]):
                 file.write(" %6d %5d %5d %5d    " % (i+1, 1, 1, 1))
                 for inode in range(nnode):
-                    file.write(" %8d" % eleNodes[0][count])
+                    # file.write(" %8d" % eleNodes[0][count])
+                    file.write(" %8d" % nodelist[eleNodes[0][count]])
                     count += 1
                 file.write("\n")
 
@@ -413,7 +441,8 @@ class Slab:
             file.write("# ipoin            coord-x            coord-y            coord-z\n")
             icount = 1
             for i, ipoin in enumerate(nodeTags):
-                node = coordlist[i+1]
+                node_tag = listnode[i+1]
+                node = coordlist[node_tag]
                 count = int(3*node)
                 file.write(" %6d    %16.8lf   %16.8lf\n" % (i+1, nodeCoords[count], nodeCoords[count+1]))
                 icount += 1
@@ -424,7 +453,7 @@ class Slab:
             count = 1
             for i, fix in self.fixno.items():
                 sup = " 1  1  1" if fix==FIXED else " 1  0  0"
-                file.write(" %6d %6d      %s\n" % (count, i, sup))
+                file.write(" %6d %6d      %s\n" % (count, nodelist[i], sup))
                 count += 1
 
             file.write("\n")
@@ -458,7 +487,8 @@ class Slab:
                 file.write(" %5d %5d\n" % (i+1, i+1))
                 file.write("# lopof       prfac-n   prfac-mb   prfac-mt\n")
                 for j in range(nnode):
-                    inode = eleNodes[0][count]
+                    # inode = eleNodes[0][count]
+                    inode = nodelist[eleNodes[0][count]]
                     file.write(" %5d %16.3f %16.3f %16.3f\n" % (inode, self.load, 0.0, 0.0))
                     count += 1
 
@@ -517,23 +547,28 @@ class Slab:
         for i in range(1, 4):
             t1 = gmsh.view.add("disp-" + str(i))
             dff = df.loc[df['icomb'] == 1]
+            dff['new_label'] = dff['point'].apply(lambda x: listnode[x])
+            # gmsh.view.addHomogeneousModelData(
+            #         t1, 0, "slab", "NodeData", dff["point"].values, dff['disp-'+str(i)].values) 
             gmsh.view.addHomogeneousModelData(
-                    t1, 0, "slab", "NodeData", dff["point"].values, dff['disp-'+str(i)].values) 
+                    t1, 0, "slab", "NodeData", dff["new_label"].values, dff['disp-'+str(i)].values) 
             gmsh.view.option.setNumber(t1, "Visible", 0)
 
         t1 = gmsh.view.add("deformed mesh")
         dff = df.loc[df['icomb'] == 1]
+        dff['new_label'] = dff['point'].apply(lambda x: listnode[x])
         npoin = dff.shape[0]
         displ = np.stack([np.zeros(npoin), np.zeros(npoin), dff['disp-1'].values], axis=1).reshape(3*npoin)
         gmsh.view.addHomogeneousModelData(
-                t1, 0, "slab", "NodeData", dff["point"].values, displ, numComponents=3) 
+                t1, 0, "slab", "NodeData", dff["new_label"].values, displ, numComponents=3) 
 
         df = ofemlib.get_csv_from_ofem(jobname, ofemlib.AST_CSV)
         for i in range(1, 6):
             t1 = gmsh.view.add("str_avg-" + str(i))
             dff = df.loc[df['icomb'] == 1]
+            dff['new_label'] = dff['point'].apply(lambda x: listnode[x])
             gmsh.view.addHomogeneousModelData(
-                    t1, 0, "slab", "NodeData", dff['point'].values, dff['str-'+str(i)].values) 
+                    t1, 0, "slab", "NodeData", dff['new_label'].values, dff['str-'+str(i)].values) 
             gmsh.view.option.setNumber(t1, "Visible", 0)
 
         df = ofemlib.get_csv_from_ofem(jobname, ofemlib.EST_CSV)
@@ -548,18 +583,19 @@ class Slab:
         return
 
     def getNodes(self):
-        nodes = msh.getNodes(gmsh.model)
+        nodes = ofemgmsh.getNodes(gmsh.model)
         return
 
     def getElements(self):
-        elems = msh.getElementShell(gmsh.model)
+        elems = ofemgmsh.getElementShell(gmsh.model)
         return
 
     def getBoundaries(self):
-        bounds = msh.getBoundaries(gmsh.model)
+        bounds = ofemgmsh.getBoundaries(gmsh.model)
         return
     
     def run(self):
+
         # Launch the GUI to see the results:
         if '-nopopup' not in sys.argv:
             gmsh.fltk.run()
@@ -640,7 +676,7 @@ class Beam:
             mesh_file = path.with_suffix('').resolve() + ".gldat"
 
         jobname = str(path.parent / (path.stem + ".ofem"))
-        ofem_file = ofemlib.ofemfile(jobname, overwrite=True)
+        ofem_file = ofemlib.OfemlibFile(jobname, overwrite=True)
 
         nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(1, includeBoundary=True)
         coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))

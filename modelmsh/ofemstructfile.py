@@ -26,7 +26,7 @@ ofem_tables = [
 ]
 
 
-class OfemDataFile:
+class OfemStructFile:
     def __init__(self, fname=None):
         if fname is None:
             self._initialize()
@@ -43,13 +43,13 @@ class OfemDataFile:
         elif self.path.suffix == '.xlsx':
             self.data = pd.read_excel(self.fname)
         elif self.path.suffix == '.msh':
-            self.data = self.read_msh(self.fname)
+            self.data = self._read_msh(self.fname)
         elif self.path.suffix == '.s2k':
-            self.data = self.read_s2k(self.fname)
+            self.data = self._read_s2k(self.fname)
         else:
             raise ValueError(f"Unknown file type: {self.path.suffix}")
 
-    def read_msh(self, fname):
+    def _read_msh(self, fname):
         with open(fname, 'r') as f:
             lines = f.readlines()
         data = {'nodes': [], 'elements': [], 'boundaries': []}
@@ -77,7 +77,7 @@ class OfemDataFile:
                 data['boundaries'] = np.array(boundaries)
         return data
 
-    def read_s2k(self, fname):
+    def _read_s2k(self, fname):
         with open(fname, 'r') as f:
             lines = f.readlines()
         data = {'sections': []}
@@ -90,11 +90,11 @@ class OfemDataFile:
                     sections.append([x for x in line.split()])
                 data['sections'] = np.array(sections)
         return data
-    
+
     def _initialize(self):
         self.data = {table: pd.DataFrame() for table in ofem_tables}
         self.data["Nodes"] = pd.DataFrame(columns=["Index", "Tag", "X", "Y", "Z", "CoordSyst"])
-        self.data["Elements"] = pd.DataFrame(columns=["Index", "Tag", "Type", "Section", "Nodes")
+        self.data["Elements"] = pd.DataFrame(columns=["Index", "Tag", "Type", "Section", "Nodes"])
         self.data["Boundaries"] = pd.DataFrame(columns=["Index", "Tag", "Node", "DOF"])
         self.data["Materials"] = pd.DataFrame(columns=["Index", "Tag", "Type", "E", "nu", "rho", "alpha"])  
         self.data["FrameSections"] = pd.DataFrame(columns=["Index", "Tag", "Type", "A", "I2", "I3", "A2", "A3", "It", "angle"])
@@ -103,5 +103,5 @@ class OfemDataFile:
 
 
 if __name__ == "__main__":
-    test = OfemDataFile()
+    test = OfemStructFile()
     print(test.data)

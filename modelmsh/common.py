@@ -1,3 +1,14 @@
+
+POINT = 0
+NODE = 0
+LINE = 1
+CURVE = 1
+AREA = 2
+SURFACE = 2
+SURF = 2
+SOLID = 3
+VOLUME = 3
+
 ofem_meshio = {
     "point": "vertex",
     "line2": "line",
@@ -41,6 +52,49 @@ ofem_gmsh = {
     "solid27": 12  # not working
 }
 gmsh_ofem = {v: k for k, v in ofem_gmsh.items()}
+
+ofem_gmsh_dim = {
+    "point": 0,
+    "line2": 1,
+    "line3": 1,
+    "area3": 2,
+    "area4": 2,
+    "area6": 2, # not working
+    "area8": 2,
+    "area9": 2,
+    "area10": 2, # not working
+    "solid4": 3,
+    "solid5": 3, # not working
+    "solid6": 3, # not working
+    "solid8": 3,
+    "solid10": 3, # not working
+    "solid14": 3, # not working
+    "solid18": 3, # not working
+    "solid20": 3,
+    "solid27": 3  # not working
+}
+
+ofem_nnodes = {
+    "point": 1,
+    "line2": 2,
+    "line3": 3,
+    "area3": 3,
+    "area4": 4,
+    "area6": 6, # not working
+    "area8": 8,
+    "area9": 9,
+    "area10": 10, # not working
+    "solid4": 4,
+    "solid5": 5, # not working
+    "solid6": 6, # not working
+    "solid8": 8,
+    "solid10": 10, # not working
+    "solid14": 14, # not working
+    "solid18": 18, # not working
+    "solid20": 20,
+    "solid27": 27  # not working
+}
+
 
 meshio_gmsh = {
     "line": 1,
@@ -128,6 +182,28 @@ meshio_sections = {
     "triangle10": 2
 }
 
+gmsh_nnode = {
+    1: 2,
+    2: 3,
+    3: 4,
+    4: 4,
+    5: 8,
+    6: 6,
+    7: 5,
+    8: 3,
+    9: 6,
+    10: 9,
+    11: 10,
+    12: 27,
+    13: 18,
+    14: 14,
+    15: 1,
+    16: 8,
+    17: 20,
+    18: 10
+}
+
+
 sections_meshio = {
     0: "point",
     1: "curve",
@@ -137,7 +213,7 @@ sections_meshio = {
 
 sections = {
     "point": {"material": 'spring'},
-    "curve": {"area": 0.001, "torsion": 0.00001, "inertia2": 0.0001, "inertia3": 0.00001, "angle": 0.0, "material": 'steel'},
+    "line": {"area": 0.001, "torsion": 0.00001, "inertia2": 0.0001, "inertia3": 0.00001, "angle": 0.0, "material": 'steel'},
     "area": {"thick": 0.25, "material": 'concrete'},
     "volume": {"material": 'concrete'}
 }
@@ -148,7 +224,7 @@ materials = {
         "poisson": 0.2,
         "weight": 77.0,
         "thermal": 1.0e-6},
-    'curve': {
+    'line': {
         "young": 200000000.0,
         "poisson": 0.2,
         "weight": 77.0,
@@ -192,3 +268,20 @@ s2k_femix = {
     "quad": (9, 4, 1, 1, 2, 1, 2)
 }
 
+ofemstruct_tables = [
+    "General",
+    "CoordinateSystems",
+    "Materials",
+    "BarSections",
+    "FrameSections",
+    "SpringSections",
+    "ShellSections",
+    "coords",
+    "elements",
+    "supports",
+    "NodeBoundaries",
+    "Combinations",
+    "LoadCases",
+    "NodalLoads",
+    "Information",
+]

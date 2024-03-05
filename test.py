@@ -14,7 +14,7 @@ print(Path.home())
 
 # Test ofem
 fname = os.path.join( os.getcwd(), "tests/cyl2")
-ofile = ofemlib.ofemfile(fname)
+ofile = ofemlib.OfemlibFile(fname)
 msh.ofemSolver(fname, 'd', 1.0e-6)
 options = {'csryn': 'n', 'ksres': 2, 'lcaco': 'c'}
 codes = [msh.ofemlib.DI_CSV, msh.ofemlib.AST_CSV, msh.ofemlib.EST_CSV]
@@ -38,14 +38,14 @@ msh.ofemResults(fname, codes, **options)
 fname = os.path.join( os.getcwd(), "tests/demo.gldat")
 mat = {'E': 30000000, 'nu': 0.3, 'rho': 25.0, 'alpha': 1.0e-5}
 slab = msh.Slab()
-# slab.addGeometry(msh.meshstruct.CIRCULAR_WITH_HOLE, (0, 0, 0), 3, 2, 0.1,
-#                  boundary=[1, 1], material=mat, thick=0.25, load=-10.0)
+slab.addGeometry(msh.meshstruct.CIRCULAR_WITH_HOLE, (0, 0, 0), 3, 1, 0.2,
+                 boundary=[0, 0, 1, 1], material=mat, thick=0.25, load=-10.0)
 
 # slab.addGeometry(msh.meshstruct.CIRCULAR_QUARTER, (0, 0, 0), 3, 0*math.pi/180, 0.2,
 #                 boundary=[1, 1, 1], material=mat, thick=0.25, load=-10.0)
 # slab.addGeometry(msh.meshstruct.CIRCULAR_SEGMENT, (1, 1, 0), 3, 30*math.pi/180, 70*math.pi/180, 
 #                 boundary=[1, 1, 1], material=mat, thick=0.25, load=-10.0)
-slab.addGeometry(msh.meshstruct.CIRCULAR, (1, 1, 0), 3, boundary=[1, 1], material=mat, thick=0.25, load=-10.0)
+# slab.addGeometry(msh.meshstruct.CIRCULAR, (1, 1, 0), 3, boundary=[1, 1], material=mat, thick=0.25, load=-10.0)
 # slab.addGeometry(msh.meshstruct.POLYGON, [(0, 0, 0), (10, 0, 0), (10, 5, 0), (0, 5, 0)],
 #                     boundary=[1, 1, -1, 1], material=mat, thick=0.25, load=-10.0)
 slab.getNodes()
@@ -59,9 +59,9 @@ slab.run()
 # beam.addGeometry(msh.meshstruct.SPATIAL3D,  [(0, 0, 0), (3, 0, 0), (6, 5, 0), (9, 5, 0)], boundary=[1, 0, 0, 0, 0], material=mat, section=sec, load=-10.0)
 # beam.run()
 
-fname = os.path.join( os.getcwd(), "tests/test.s2k")
-# fname = os.path.join( os.getcwd(), "tests/test.xlsx")
-s2000 = msh.sap2000_handler(fname)
+#fname = os.path.join( os.getcwd(), "tests/test.s2k")
+fname = os.path.join( os.getcwd(), "tests/test.xlsx")
+s2000 = msh.Sap2000Handler(fname)
 # s2000.to_femix()
 # fname = os.path.join( os.getcwd(), "test.xlsx")
 # s2000.read_excel(fname, 'pandas')
