@@ -1,5 +1,5 @@
-import common
-from dataclasses import dataclass
+from . import common
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Union
 import numpy as np
@@ -14,8 +14,8 @@ elemtypes = list(common.ofem_meshio.keys())
 @dataclass
 class OfemMesh:
     title: str
-    points = pd.DataFrame(columns= ["tag", "x", "y", "z"])
-    elements = pd.DataFrame(columns= ["tag", "type",
+    _points = pd.DataFrame(columns= ["tag", "x", "y", "z"])
+    _elements = pd.DataFrame(columns= ["tag", "type",
         "node1", "node2", "node3", "node4", "node5", "node6", "node7", "node8", "node9",
         "node10", "node11", "node12", "node13", "node14", "node15", "node16", "node17", "node18", 
         "node19", "node20", "node21", "node22", "node23", "node24", "node25", "node26", "noode27"])
@@ -27,16 +27,16 @@ class OfemMesh:
     _num_elements: int = 0
 
     def _set_tags_to_id(self, base: int = 1):
-        self._num_points = self.points.shape[0]
-        self._nodetag_to_id = dict(zip(self.points["tag"].values, np.arange(base, self._num_points+base)))
-        self._num_elements = self.elements.shape[0]   
-        self._elemtag_to_id = dict(zip(self.elements["tag"].values, np.arange(base, self._num_elements+base)))
+        self._num_points = self._points.shape[0]
+        self._nodetag_to_id = dict(zip(self._points["tag"].values, np.arange(base, self._num_points+base)))
+        self._num_elements = self._elements.shape[0]   
+        self._elemtag_to_id = dict(zip(self._elements["tag"].values, np.arange(base, self._num_elements+base)))
         return
 
     def _set_points_elems_id(self, base: int = 1):
         self._set_tags_to_id(base)     
-        self.points["id"] = self.points["tag"].apply(lambda x: self._nodetag_to_id[x])
-        self.elements["id"] = self.elements["tag"].apply(lambda x: self._elemtag_to_id[x])
+        self._points["id"] = self._points["tag"].apply(lambda x: self._nodetag_to_id[x])
+        self._elements["id"] = self._elements["tag"].apply(lambda x: self._elemtag_to_id[x])
         return 
 
     def _get_list_node_columns(self, elemtype: str):
@@ -61,15 +61,15 @@ class OfemMesh:
         dfs = pd.read_excel(filename, sheet_name=None)
         
         # coordinates
-        self.points = dfs["points"]
-        self.points["tag"] = self.points["tag"].astype(str)
-        self._num_points = self.points.shape[0]
+        self._points = dfs["points"]
+        self._points["tag"] = self._points["tag"].astype(str)
+        self._num_points = self._points.shape[0]
 
         # elements
-        self.elements = dfs["elements"]
-        self.elements["tag"] = self.elements["tag"].astype(str)
-        self._num_elements = self.elements.shape[0]
-        self.elemlist = {k: self.elements[self.elements["type"] == k]["tag"].values for k in elemtypes}  
+        self._elements = dfs["elements"]
+        self._elements["tag"] = self._elements["tag"].astype(str)
+        self._num_elements = self._elements.shape[0]
+        self.elemlist = {k: self._elements[self._elements["type"] == k]["tag"].values for k in elemtypes}  
 
         return
     
@@ -81,14 +81,14 @@ class OfemMesh:
     
     def _to_meshio(self):
         self._set_tags_to_id(base=0)
-        points = self.points[["x", "y", "z"]].values
+        points = self._points[["x", "y", "z"]].values
         # points = np.array(self.points[["x", "y", "z"]])
         print(f"points:\n{points}")
         elems = []
         for k, v in self.elemlist.items():
             if v.size == 0: continue
 
-            k_elems = self.elements[self.elements["type"] == k]
+            k_elems = self._elements[self._elements["type"] == k]
             nnodes = int(re.search(r"\d+$", k).group())
             nlist = [f"node{i}" for i in range(1, nnodes+1)]
             # for col in nlist:
@@ -111,8 +111,8 @@ class OfemMesh:
         gmsh.model.add(self.title)
 
         # Add nodes
-        listofnodes = self.points["tag"].values
-        coordlist = self.points[["x", "y", "z"]].values.ravel().tolist()
+        listofnodes = self._points["tag"].values
+        coordlist = self._points[["x", "y", "z"]].values.ravel().tolist()
         entity = gmsh.model.addDiscreteEntity(0)
         gmsh.model.mesh.addNodes(0, entity, listofnodes, coordlist)
 
@@ -126,7 +126,7 @@ class OfemMesh:
             gmsh_type = common.ofem_gmsh[elemtype]
 
             # select elements of type elemtype
-            gmsh_elems = self.elements.loc[self.elements["type"] == elemtype]
+            gmsh_elems = self._elements.loc[self._elements["type"] == elemtype]
             # create a list with the numbers of elements
             elems_list = np.array(gmsh_elems["id"]).astype(int).tolist()
 
@@ -141,10 +141,10 @@ class OfemMesh:
     
     def add_node(self, tag: Union[int, str], x: float, y: float, z: float):
         tag = str(tag)
-        if tag in self.points["tag"].values:
+        if tag in self._points["tag"].values:
             raise ValueError(f"Node with tag {tag} already exists")
         node = pd.DataFrame({"tag": [tag], "x": [x], "y": [y], "z": [z]})
-        self.points = pd.concat([self.points, node], ignore_index=True)
+        self._points = pd.concat([self._points, node], ignore_index=True)
         return
     
     def add_nodes(self, tags: list, points: list):
@@ -157,14 +157,14 @@ class OfemMesh:
 
     def add_element(self, tag: Union[int, str], elemtype: str, nodes: list):
         tag = str(tag)
-        if tag in self.elements["tag"].values:
+        if tag in self._elements["tag"].values:
             raise ValueError(f"Element with tag {tag} already exists")
         if elemtype not in elemtypes:
             raise ValueError(f"Element type {elemtype} not recognized")
         nnodes = common.ofem_nnodes[elemtype]
         if len(nodes) != nnodes:
             raise ValueError(f"Element type {elemtype} requires {nnodes} nodes")
-        node_values = self.points["tag"].values
+        node_values = self._points["tag"].values
         nodes = list(map(str, nodes))
         for node in nodes:
             if node not in node_values:
@@ -172,7 +172,7 @@ class OfemMesh:
 
         element = pd.DataFrame({"tag": [tag], "type": [elemtype]})
         element = pd.concat([element, pd.DataFrame([nodes], columns=self._get_list_node_columns(elemtype))], axis=1)
-        self.elements = pd.concat([self.elements, element], ignore_index=True)
+        self._elements = pd.concat([self._elements, element], ignore_index=True)
         return
 
     def add_elements_by_type(self, elemtype: str, tags: list, nodes: list):
@@ -196,40 +196,52 @@ class OfemMesh:
     
     @property
     def points(self):
-        return self.points
+        return self._points
+    
+    @points.setter
+    def points(self, points):
+        self._points = points
     
     @property
     def elements(self):
-        return self.elements
+        return self._elements
+
+    @elements.setter
+    def elements(self, elements):    
+        self._elements = elements
 
 
 @dataclass
 class OfemStructure:
     title: str
-    mesh: OfemMesh = OfemMesh(title)
+    _mesh: OfemMesh = field(init=False)
     # section types are: FRAME, SHELL, SPRING,
-    _sections = pd.DataFrame(columns= ["name", "type", "material"])
+    _sections = pd.DataFrame(columns= ["section", "type", "material"])
     _supports = pd.DataFrame(columns= ["tag", "type", "props"])
     # material types are: GENERAL, CONCRETE, STEEL, TIMBER, SPRIN, SOIL
     _materials = pd.DataFrame(columns= ["name", "type", "props"])
     _elemsections = pd.DataFrame(columns= ["element", "section"])
     _nodesupports = pd.DataFrame(columns= ["node", "support"])
 
+    def __post_init__(self):
+        # Initialize field2 with the value of field1
+        self._mesh: OfemMesh = OfemMesh(self.title)
+
     def read_excel(self, filename: str):
         dfs = pd.read_excel(filename, sheet_name=None)
 
         # coordinates
         if "points" in dfs:
-            self.mesh.points = dfs["points"]
-            self.mesh.points["tag"] = self.mesh.points["tag"].astype(str)
-            self.mesh._num_points = self.mesh.points.shape[0]
+            self.mesh._points = dfs["points"]
+            self.mesh._points["tag"] = self.mesh._points["tag"].astype(str)
+            self.mesh._num_points = self.mesh._points.shape[0]
 
         # elements
         if "elements" in dfs:
-            self.mesh.elements = dfs["elements"]
-            self.mesh.elements["tag"] = self.mesh.elements["tag"].astype(str)
-            self.mesh._num_elements = self.mesh.elements.shape[0]
-            self.mesh.elemlist = {k: self.mesh.elements[self.mesh.elements["type"] == k]["tag"].values for k in elemtypes}
+            self.mesh._elements = dfs["elements"]
+            self.mesh._elements["tag"] = self.mesh._elements["tag"].astype(str)
+            self.mesh._num_elements = self.mesh._elements.shape[0]
+            self.mesh.elemlist = {k: self.mesh._elements[self.mesh._elements["type"] == k]["tag"].values for k in elemtypes}
 
         # sections
         if "sections" in dfs:
@@ -256,6 +268,100 @@ class OfemStructure:
             self._materials = dfs["materials"]
 
         return
+
+    def write_excel(self, filename: str):
+        with pd.ExcelWriter(filename) as writer:
+            # Write each DataFrame to a different sheet
+            self.mesh._points.to_excel(writer, sheet_name='points', index=False)
+            self.mesh._elements.to_excel(writer, sheet_name='elements', index=False)
+            self._sections.to_excel(writer, sheet_name='sections', index=False)
+            self._elemsections.to_excel(writer, sheet_name='elementsections', index=False)
+            # self._supports.to_excel(writer, sheet_name='supports', index=False)
+            self._materials.to_excel(writer, sheet_name='materials', index=False)
+        return
+
+    def to_dict(self):
+        return {
+            "points": self.mesh._points, 
+            "elements": self.mesh._elements, 
+            "sections": self._sections,
+            "elementsections": self._elemsections,
+#            "supports": self._supports,
+            "materials": self._materials
+        }
+
+    @property
+    def mesh(self):
+        return self._mesh
+    
+    @mesh.setter
+    def mesh(self, mesh):
+        self._mesh = mesh
+    
+    # @property
+    # def title(self):
+    #     return self._title
+    
+    # @title.setter
+    # def title(self, title):
+    #     self._title = title
+        
+    @property
+    def points(self):
+        return self._mesh.points
+    
+    @points.setter
+    def points(self, points):
+        self._mesh.points = points
+    
+    @property
+    def elements(self):
+        return self._mesh.elements
+    
+    @elements.setter
+    def elements(self, elements):
+        self._mesh.elements = elements
+    
+    @property
+    def sections(self):
+        return self._sections
+    
+    @sections.setter
+    def sections(self, sections):
+        self._sections = sections
+        
+    @property
+    def supports(self):
+        return self._supports
+    
+    @supports.setter
+    def supports(self, supports):
+        self._supports = supports
+    
+    @property
+    def materials(self):
+        return self._materials
+    
+    @materials.setter
+    def materials(self, materials):
+        self._materials = materials
+    
+    @property
+    def element_sections(self):
+        return self._elemsections
+    
+    @element_sections.setter
+    def element_sections(self, elemsections):
+        self._elemsections = elemsections
+    
+    @property
+    def node_supports(self):
+        return self._nodesupports
+    
+    @node_supports.setter
+    def node_supports(self, nodesupports):
+        self._nodesupports = nodesupports
+    
 
 
 if __name__ == "__main__":

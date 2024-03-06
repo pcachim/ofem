@@ -147,75 +147,75 @@ class msh_handler:
             gmsh.initialize()
 
 
-    def import_s3dx(self, filename: str):
-        """Import a .s3dx file and write a .msh file
+    # def import_s3dx(self, filename: str):
+    #     """Import a .s3dx file and write a .msh file
 
-        Args:
-            filename (str): the .s3dx file to be imported
+    #     Args:
+    #         filename (str): the .s3dx file to be imported
 
-        Raises:
-            Exception: wrong file extension
-        """
+    #     Raises:
+    #         Exception: wrong file extension
+    #     """
 
-        path = pathlib.Path(filename)
-        if path.suffix.lower() != ".s3dx":
-            raise Exception("File extension is not .s3dx")
-        self._filename = str(path.parent / path.stem)
+    #     path = pathlib.Path(filename)
+    #     if path.suffix.lower() != ".s3dx":
+    #         raise Exception("File extension is not .s3dx")
+    #     self._filename = str(path.parent / path.stem)
 
-        with open(filename, 'r') as f:
-            title = f.readline()
+    #     with open(filename, 'r') as f:
+    #         title = f.readline()
 
-            while True:
-                try:
-                    title = f.readline()
-                    if title.strip() == "": break
-                except:
-                    break
+    #         while True:
+    #             try:
+    #                 title = f.readline()
+    #                 if title.strip() == "": break
+    #             except:
+    #                 break
 
-                nelems, nnodes, nspec = f.readline().strip().split()
+    #             nelems, nnodes, nspec = f.readline().strip().split()
 
-                elems = []
-                types = []
-                lnode = []
-                ndims = []
-                for i in range(int(nelems)):
-                    lin = f.readline().strip().split()
-                    # n, ty, nn, ln = f.readline().strip().split()
-                    n  = int(lin[0])
-                    ty = int(lin[1])
-                    nn = int(lin[2])
-                    ln = lin[-nn:]
-                    code, ndim, ln = femix2gmsh(ty, nn, ln)
-                    if code not in types:
-                        types.append(code)
-                        elems.append([n])
-                        lnode.append(ln)
-                        ndims.append(int(ndim))
-                    else:
-                        index = types.index(code)
-                        lnode[index].extend(ln)
-                        elems[index].append(n)
+    #             elems = []
+    #             types = []
+    #             lnode = []
+    #             ndims = []
+    #             for i in range(int(nelems)):
+    #                 lin = f.readline().strip().split()
+    #                 # n, ty, nn, ln = f.readline().strip().split()
+    #                 n  = int(lin[0])
+    #                 ty = int(lin[1])
+    #                 nn = int(lin[2])
+    #                 ln = lin[-nn:]
+    #                 code, ndim, ln = femix2gmsh(ty, nn, ln)
+    #                 if code not in types:
+    #                     types.append(code)
+    #                     elems.append([n])
+    #                     lnode.append(ln)
+    #                     ndims.append(int(ndim))
+    #                 else:
+    #                     index = types.index(code)
+    #                     lnode[index].extend(ln)
+    #                     elems[index].append(n)
 
-                nodes = []
-                coord = []
-                for i in range(int(nnodes)):
-                    lin = f.readline().strip().split()
-                    nodes.append(int(lin[0]))
-                    coord.extend([float(lin[1]), float(lin[2]), float(lin[3])])
+    #             nodes = []
+    #             coord = []
+    #             for i in range(int(nnodes)):
+    #                 lin = f.readline().strip().split()
+    #                 nodes.append(int(lin[0]))
+    #                 coord.extend([float(lin[1]), float(lin[2]), float(lin[3])])
 
-                specs = []
-                for i in range(int(nspec)):
-                    lin = f.readline().strip().split()
-                    specs.append(int(lin[1]))
+    #             specs = []
+    #             for i in range(int(nspec)):
+    #                 lin = f.readline().strip().split()
+    #                 specs.append(int(lin[1]))
 
-        gmsh.model.add(title)
-        for i in range(len(elems)):
-            tag = gmsh.model.addDiscreteEntity(ndims[i], -1)
-            gmsh.model.mesh.addNodes(ndims[i], tag, nodes, coord)
-            gmsh.model.mesh.addElements(ndims[i], tag, [types[i]], [elems[i]], [lnode[i]])
+    #     gmsh.model.add(title)
+    #     for i in range(len(elems)):
+    #         tag = gmsh.model.addDiscreteEntity(ndims[i], -1)
+    #         gmsh.model.mesh.addNodes(ndims[i], tag, nodes, coord)
+    #         gmsh.model.mesh.addElements(ndims[i], tag, [types[i]], [elems[i]], [lnode[i]])
 
-        gmsh.write(self._filename + ".msh")
-        return
+    #     gmsh.write(self._filename + ".msh")
+    #     return
 
 
     def addNodeData ():

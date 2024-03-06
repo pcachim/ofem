@@ -12,7 +12,7 @@ import logging
 import timeit
 import copy
 from .common import *
-from .ofemmesh import OfemStructure, OfemMesh
+from .ofemmesh import *
 
 # Element type
 POINT = 15
@@ -848,14 +848,12 @@ class Sap2000Handler:
         return self._filename + ".msh"
 
     def to_ofem_structure(self, model: str = 'geometry', entities: str = 'types', physicals: str = ''):
-        """Writes a GMSH mesh file and opens it in GMSH
+        """Writes a OFEM mesh file
 
         Args:
             filename (str): the name of the file to be written
         """
         filename = self._filename + ".msh"
-        listsectionframes = None
-        listsectionareas = None
 
         # process options
         if model not in ['geometry', 'mesh']:
@@ -870,162 +868,76 @@ class Sap2000Handler:
         if not self._check_input(filename):
             raise ValueError('Filename id nt in correct format')
 
-        self.ofem = OfemMesh("title stucture")
-        # initialize gmsh
-        gmsh.initialize(sys.argv)
-
-        gmsh.model.add(pathlib.Path(filename).stem)
-        gmsh.model.setFileName(filename)
+        self.ofem = OfemStructure("title stucture")
 
         joints = self.s2k['Joint Coordinates'.upper()]
         elems = self.s2k['Connectivity - Frame'.upper()]
         areas = self.s2k['Connectivity - Area'.upper()]
-        sect = self.s2k['Frame Section Properties 01 - General'.upper()]
-        sectassign = self.s2k['Frame Section Assignments'.upper()]
+        framesect = self.s2k['Frame Section Properties 01 - General'.upper()]
+        framesectassign = self.s2k['Frame Section Assignments'.upper()]
         areasect = self.s2k['Area Section Properties'.upper()]
         areaassign = self.s2k['Area Section Assignments'.upper()]
         groups = self.s2k['Groups 1 - Definitions'.upper()]
         groupsassign = self.s2k['Groups 2 - Assignments'.upper()]
 
-        logging.basicConfig(level=logging.DEBUG)
-        logging.info("Writing GMSH file: %s", filename)
-
         # JOINTS
-        njoins = joints.shape[0]
-        self.ofem.points = pd.DataFrame(joints).rename(columns={"Joint": "tag", "XorY": "x", "Y": "y", "Z": "z"})
+        df = pd.DataFrame(joints).rename(columns={"Joint": "tag", "XorR": "x", "Y": "y", "Z": "z"})
+        df.loc[:,'tag'] = df.loc[:, ["tag"]].astype(str)
+        self.ofem.points = pd.concat([self.ofem.points, df[['tag', 'x', 'y', 'z']]])
 
         # ELEMENTS - FRAMES
-        df = pd.DataFrame(elems).rename(columns={"Frame": "tag", "JoinI": "node1", "JoinJ": "node2"})
-        df["type"] = "line2"
-        self.ofem.elements = pd.concat(self.ofem.elements, df)
-        nelems = elems.shape[0]
-        logging.info(f"Processing frames ({nelems})...")
-        elems.insert(1, "ElemTag", np.arange(1, nelems+1), False)
-        elems.insert(2, "Section", sectassign['AnalSect'].values, False)
-        elems[['Frame', 'JointI', 'JointJ']] = elems[['Frame', 'JointI', 'JointJ']].astype(str)
-        elems['Node1'] = joints.loc[elems['JointI'].values, 'JoinTag'].values
-        elems['Node2'] = joints.loc[elems['JointJ'].values, 'JoinTag'].values
-        elems['Nodes'] = elems[['Node1', 'Node2']].values.tolist()
+        df = pd.DataFrame(elems).rename(columns={"Frame": "tag", "JointI": "node1", "JointJ": "node2"})
+        df.loc[:, "type"] = "line2"
+        df.loc[:, 'tag'] = "line-" + df.loc[:,['tag']].astype(str)
+        self.ofem.elements = pd.concat([self.ofem.elements, df[['tag', 'type', 'node1', 'node2']]])
 
-        if entities == 'elements':
-            elems['Nodes'] = elems.apply(
-                lambda row: add_elem_nodes(joints, row['ElemTag'], row["JointI"],row["JointJ"]), 
-                axis=1
-                )
-        elif entities == 'sections':
-            for row in sect.itertuples():
-                sec = getattr(row, 'SectionName')
-                framesl = pd.DataFrame(elems.loc[elems['Section']==sec])
-                line = gmsh.model.addDiscreteEntity(CURVE)
-                gmsh.model.setEntityName(CURVE, line, sec)
-                lst = framesl['ElemTag'].to_list()
-                gmsh.model.mesh.addElementsByType(line, FRAME2, lst, framesl['Nodes'].explode().to_list())
+        df = pd.DataFrame(framesectassign).rename(columns={"Frame": "element", "AnalSect": "section"})
+        df.loc[:, 'element'] = "line-" + df.loc[:,['element']].astype(str)
+        self.ofem.element_sections = pd.concat([self.ofem.sections, df[["element", "section"]]])
 
-                if physicals == 'sections':
-                    gmsh.model.addPhysicalGroup(CURVE, [line], name="section: " + sec)
-
-        elif entities == 'types':
-            line = gmsh.model.addDiscreteEntity(CURVE)
-            gmsh.model.setEntityName(CURVE, line, 'Line2')
-            gmsh.model.mesh.addElementsByType(line, FRAME2, elems['ElemTag'].to_list(), elems['Nodes'].explode().to_list())
-        else:
-            raise ValueError('entities must be "types", "sections" or "elements"')
-
+        df = pd.DataFrame(framesect).rename(columns={
+            "SectionName": "section", "Material": "material",
+            "Area": "area", "I33": "inertia3", "I22": "inertia2", 
+            "TorsConst": "torsion"})
+        df.loc[:, "type"] = "line"
+        df.loc[:, "angle"] = 0.0
+        df.loc[:, "design"] = "none"
+        
+        self.ofem.sections = pd.concat([self.ofem.sections, 
+            df[["section", "type", "material", "design", "area", "inertia3", 
+                "inertia2", "torsion", "angle"]]])
+                            
         # ELEMENTS - AREAS
-        starttime = timeit.default_timer()
-        logging.info(f"Processing areas ({nelems})...")
-        nelems = self._nareas
-        areas["ElemTag"] = np.arange(1, nelems+1)
-        areas["Section"] = areaassign['Section'].values
-        areas[['Area','Joint1','Joint2','Joint3','Joint4']] = areas[['Area','Joint1','Joint2','Joint3','Joint4']].astype(str)
-        areas['Node1'] = joints.loc[areas['Joint1'].values, 'JoinTag'].values
-        areas['Node2'] = joints.loc[areas['Joint2'].values, 'JoinTag'].values
-        areas['Node3'] = joints.loc[areas['Joint3'].values, 'JoinTag'].values
-        areas['Node4'] = areas.apply(lambda row: 'nan' if row['Joint4'] == 'nan' else joints.at[row['Joint4'], 'JoinTag'], axis=1)
+        df = pd.DataFrame(areas).rename(columns={"Area": "tag", "Joint1": "node1", "Joint2": "node2", 
+                                        "Joint3": "node3", "Joint4": "node4"})
+        df3 = df[df['NumJoints'] == 3].copy()
+        df3.loc[:, 'type'] = "area3"
+        df3.loc[:, 'tag'] = "area-" + df3.loc[:,['tag']].astype(str)
+        self.ofem.elements = pd.concat([self.ofem.elements, 
+                    df3[['tag', 'type', 'node1', 'node2', 'node3']]])
+        df3 = None
+        df4 = df[df['NumJoints'] == 4].copy()
+        df4.loc[:, "type"] = "area4"
+        df4.loc[:, 'tag'] = "area-" + df4.loc[:,['tag']].astype(str)
+        self.ofem.elements = pd.concat([self.ofem.elements, 
+                    df4[['tag', 'type', 'node1', 'node2', 'node3', 'node4']]])
+        df4 = None
 
-        logging.debug(f"Execution time: {round((timeit.default_timer() - starttime)*1000,3)} ms")
-        if entities == 'elements':  
-            starttime = timeit.default_timer()
-            np.vectorize(add_area_nodes, otypes=[np.ndarray])(areas['ElemTag'].values,
-                    areas['Node1'].values, areas['Node2'].values, areas['Node3'].values, areas['Node4'].values)
-            logging.debug(f"Execution time for adding to model: {round((timeit.default_timer() - starttime)*1000,3)} ms")
+        df = pd.DataFrame(areaassign).rename(columns={"Area": "element", "Section": "section"})
+        df.loc[:, 'element'] = "area-" + df.loc[:,['element']].astype(str)
+        self.ofem.element_sections = pd.concat([self.ofem.sections, df[["element", "section"]]])
 
-        elif entities == 'sections':
-            for row in areasect.itertuples():
-                sec = getattr(row, 'Section')
-                areasl = pd.DataFrame(areas.loc[areas['Section']==sec])
-                surf = gmsh.model.addDiscreteEntity(SURFACE)
-                gmsh.model.setEntityName(SURFACE, surf, sec)
+        df = pd.DataFrame(areasect).rename(columns={
+            "Section": "section", "Material": "material", "Thickness": "thick"})
+        df.loc[:, "type"] = "area"
+        df.loc[:, "angle"] = 0.0
+        df.loc[:, "design"] = "none"
+        
+        self.ofem.sections = pd.concat([self.ofem.sections, 
+            df[["section", "type", "material", "design", "thick", "angle"]]])
 
-                areas3 = pd.DataFrame(areasl.loc[areasl['Joint4'] == 'nan'])
-                areas3['nodes'] = areas3.loc[:,['Node1', 'Node2', 'Node3']].values.tolist()
-                gmsh.model.mesh.addElementsByType(surf, TRIANGLE3, areas3['ElemTag'].to_list(), areas3['nodes'].explode().to_list())
-            
-                areas3 = pd.DataFrame(areasl.loc[areas['Joint4'] != 'nan'])
-                areas3['nodes'] = areas3.loc[:,['Node1', 'Node2', 'Node3', 'Node4']].values.tolist()
-                gmsh.model.mesh.addElementsByType(surf, QUADRANGLE4, areas3['ElemTag'].to_list(), areas3['nodes'].explode().to_list())
-
-                if physicals == 'sections':
-                    gmsh.model.addPhysicalGroup(SURFACE, [surf], name="section: " + sec)
-
-        elif entities == 'types':
-            areas3 = pd.DataFrame(areas.loc[areas['Joint4'] == 'nan'])
-            areas3['nodes'] = areas3.loc[:,['Node1', 'Node2', 'Node3']].values.tolist()
-            surf = gmsh.model.addDiscreteEntity(SURFACE)
-            gmsh.model.setEntityName(SURFACE, surf, 'Triangle3')
-            gmsh.model.mesh.addElementsByType(surf, TRIANGLE3, areas3['ElemTag'].to_list(), areas3['nodes'].explode().to_list())
-
-            areas3 = pd.DataFrame(areas.loc[areas['Joint4'] != 'nan'])
-            areas3['nodes'] = areas3.loc[:,['Node1', 'Node2', 'Node3', 'Node4']].values.tolist()
-            surf = gmsh.model.addDiscreteEntity(SURFACE)
-            gmsh.model.setEntityName(SURFACE, surf, 'Quadrangle4')
-            gmsh.model.mesh.addElementsByType(surf, QUADRANGLE4, areas3['ElemTag'].to_list(), areas3['nodes'].explode().to_list())
-        else:
-            raise ValueError('entities must be "types", "sections" or "elements"')
-
-        # PHYSICALS
-        if physicals == 'sections' and entities == 'elements':
-            for row in sect.itertuples():
-                sec = getattr(row, 'SectionName')
-                lst = elems.loc[elems['Section']==sec]['ElemTag'].values
-                gmsh.model.addPhysicalGroup(CURVE, lst, name="section: " + sec)
-
-            for row in areasect.itertuples():
-                sec = getattr(row, 'Section')
-                lst = areas.loc[areas['Section']==sec]['ElemTag'].values
-                gmsh.model.addPhysicalGroup(SURFACE, lst, name="section: " + sec)
-
-        if False:
-            logging.debug("Processing FEM mesh...")
-            gmsh.model.add("FEM mesh")
-            # prepares the GMSH model
-            njoins = coordsauto.shape[0]
-            logging.info(f"Processing nodes ({njoins})...")
-#            coordsauto.insert(0, "JoinTag", np.arange(1, njoins+1), False)
-#            coordsauto['Joint'] = coordsauto['Joint'].astype(str)
-#            coordsauto['Joint2'] = coordsauto.loc[:, 'Joint']
-#            coordsauto.set_index('Joint', inplace=True)
-#            coordsauto['coord'] = coordsauto.apply(lambda x: np.array([x['XorR'], x['Y'], x['Z']]),axis=1) 
-#            lst1 = coordsauto['coord'].explode().to_list()
-            point = gmsh.model.addDiscreteEntity(POINT)
-            gmsh.model.mesh.addNodes(POINT, point, ijoins, lst1)
-
-        logging.debug("Processing GMSH intialization...")
-
-        gmsh.model.setAttribute("Materials", ["Concrete:Stiff:30000000",  "Concrete:Poiss:0.2", "Steel:Stiff:20000000", "Steel:Poiss:0.3"])
-
-        gmsh.option.setNumber("Mesh.SaveAll", 1)
-
-        #size = gmsh.model.getBoundingBox(-1, -1)
-        gmsh.write(filename)
-
-        # # Launch the GUI to see the results:
-        # if '-nopopup' not in sys.argv:
-        #     gmsh.fltk.run()
-
-        gmsh.finalize()
-
-        return self._filename + ".msh"
+        self.ofem.write_excel(self._filename + "_test.xlsx")
+        return
 
     def to_msh_and_open(self, model: str = 'geometry', entities: str = 'types', physicals: str = ''):
 
@@ -1046,3 +958,7 @@ class Sap2000Handler:
 
     def copy(self):
         return copy.deepcopy(self)
+
+if __name__ == "__main__":
+    s2000 = Sap2000Handler("tests/test.xlsx")
+    s2000.to_ofem_structure()

@@ -13,6 +13,7 @@ from . import sap2000
 from . import femix
 from . import ofemhandler
 from . import meshstruct
+from . import ofemmesh
 from .sap2000 import Sap2000Handler
 from .femix import femix_handler
 from .ofemhandler import ofem_handler
