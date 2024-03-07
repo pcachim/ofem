@@ -280,8 +280,8 @@ class OfemStruct:
 
         files = self.to_dict()
         json_data = json.dumps(files, indent=2).replace('NaN', 'null')
-        with open(filename+'.json', 'w') as f:
-            f.write(json_data)
+        # with open(filename+'.json', 'w') as f:
+        #     f.write(json_data)
 
         # Create an in-memory buffer
         json_buffer = io.BytesIO(json_data.encode('utf-8'))
@@ -292,6 +292,23 @@ class OfemStruct:
                 zip_file.writestr(path.stem+'.json', json_buffer.read().decode('utf-8'))        
         return
     
+    def save(self, filename: str, file_format: str = None):
+        path = Path(filename)
+        
+        if path.suffix == "" and file_format == None:
+            raise ValueError(f"File format not recognized")
+
+        if file_format == None:
+            file_format = Path(filename).suffix
+
+        if file_format == ".xlsx":
+            self.write_excel(filename)
+        elif file_format == ".xfem":
+            self.write_xfem(filename)
+        else:
+            raise ValueError(f"File format {file_format} not recognized")
+        return
+
     def read_xfem(self, filename: str): 
         path = Path(filename)
         if path.suffix != ".xfem":
@@ -301,6 +318,18 @@ class OfemStruct:
             with zip_file.open(path.stem+'.json') as json_file:
                 data = json.load(json_file)
                 self.from_dict(data)
+        return
+
+    def load(self, filename: str, file_format: str = None):
+        if file_format == None:
+            file_format = Path(filename).suffix
+
+        if file_format == ".xlsx":
+            self.read_excel(filename)
+        elif file_format == ".xfem":
+            self.read_xfem(filename)
+        else:
+            raise ValueError(f"File format {file_format} not recognized")
         return
 
     def to_dict(self):
@@ -313,13 +342,25 @@ class OfemStruct:
             "materials": self._materials.to_dict(orient="records")
         }
 
-    def from_dict(self, data: dict):
-        self.mesh._points = pd.DataFrame(data["points"])
-        self.mesh._elements = pd.DataFrame(data["elements"])
-        self._sections = pd.DataFrame(data["sections"])
-        self._elemsections = pd.DataFrame(data["elementsections"])
-        self._supports = pd.DataFrame(data["supports"])
-        self._materials = pd.DataFrame(data["materials"])
+    def from_dict(self, ofem_dict: dict):
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["points"]).encode())
+        json_buffer.seek(0)
+        self.mesh._points = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["elements"]).encode())
+        json_buffer.seek(0)
+        self.mesh._elements = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["sections"]).encode())
+        json_buffer.seek(0)
+        self._sections = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["elementsections"]).encode())
+        json_buffer.seek(0)
+        self._elemsections = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["supports"]).encode())
+        json_buffer.seek(0)
+        self._supports = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["materials"]).encode())
+        json_buffer.seek(0)
+        self._materials = pd.read_json(json_buffer, orient='records')
         return
 
     @property
@@ -332,11 +373,11 @@ class OfemStruct:
     
     # @property
     # def title(self):
-    #     return self._title
+    #     return self._mesh._title
     
     # @title.setter
     # def title(self, title):
-    #     self._title = title
+    #     self._mesh._title = title
         
     @property
     def points(self):

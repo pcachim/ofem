@@ -879,22 +879,25 @@ class Sap2000Handler:
         areaassign = self.s2k['Area Section Assignments'.upper()]
         material = self.s2k['Material Properties 02 - Basic Mechanical Properties'.upper()]
         supports = self.s2k['Joint Restraint Assignments'.upper()]
-        groups = self.s2k['Groups 1 - Definitions'.upper()]
-        groupsassign = self.s2k['Groups 2 - Assignments'.upper()]
+        # groups = self.s2k['Groups 1 - Definitions'.upper()]
+        # groupsassign = self.s2k['Groups 2 - Assignments'.upper()]
 
         # JOINTS
         df = pd.DataFrame(joints).rename(columns={"Joint": "tag", "XorR": "x", "Y": "y", "Z": "z"})
-        df.loc[:,'tag'] = df.loc[:, ["tag"]].astype(str)
+        df.loc[:, ["tag"]].astype(str)
         self.ofem.points = pd.concat([self.ofem.points, df[['tag', 'x', 'y', 'z']]])
 
         # ELEMENTS - FRAMES
         df = pd.DataFrame(elems).rename(columns={"Frame": "tag", "JointI": "node1", "JointJ": "node2"})
         df.loc[:, "type"] = "line2"
-        df.loc[:, 'tag'] = "line-" + df.loc[:,['tag']].astype(str)
+        # df.loc[:, 'tag'] = df.loc[:, 'tag'].astype(str)
+        df['tag'] = df['tag'].astype(str)
+        df.loc[:, 'tag'] = "line-" + df['tag'].astype(str)
         self.ofem.elements = pd.concat([self.ofem.elements, df[['tag', 'type', 'node1', 'node2']]])
 
         df = pd.DataFrame(framesectassign).rename(columns={"Frame": "element", "AnalSect": "section"})
-        df.loc[:, 'element'] = "line-" + df.loc[:,['element']].astype(str)
+        df['element'] = df['element'].astype(str)
+        df.loc[:, 'element'] = "line-" + df.loc[:,['element']]
         self.ofem.element_sections = pd.concat([self.ofem.element_sections, df[["element", "section"]]])
 
         df = pd.DataFrame(framesect).rename(columns={
@@ -912,21 +915,27 @@ class Sap2000Handler:
         # ELEMENTS - AREAS
         df = pd.DataFrame(areas).rename(columns={"Area": "tag", "Joint1": "node1", "Joint2": "node2", 
                                         "Joint3": "node3", "Joint4": "node4"})
+        df['tag'] = df['tag'].astype(str)
+
         df3 = df[df['NumJoints'] == 3].copy()
-        df3.loc[:, 'type'] = "area3"
-        df3.loc[:, 'tag'] = "area-" + df3.loc[:,['tag']].astype(str)
-        self.ofem.elements = pd.concat([self.ofem.elements, 
-                    df3[['tag', 'type', 'node1', 'node2', 'node3']]])
+        if not df3.empty:
+            #df3['type'] = "area3"
+            df3.loc[:, "type"] = "area3"
+            df3['tag'] = "area-" + df3['tag']
+            self.ofem.elements = pd.concat([self.ofem.elements, 
+                        df3[['tag', 'type', 'node1', 'node2', 'node3']]])
         df3 = None
         df4 = df[df['NumJoints'] == 4].copy()
-        df4.loc[:, "type"] = "area4"
-        df4.loc[:, 'tag'] = "area-" + df4.loc[:,['tag']].astype(str)
-        self.ofem.elements = pd.concat([self.ofem.elements, 
-                    df4[['tag', 'type', 'node1', 'node2', 'node3', 'node4']]])
+        if not df4.empty:
+            df4.loc[:, "type"] = "area4"
+            df4['tag'] = "area-" + df4['tag']
+            self.ofem.elements = pd.concat([self.ofem.elements, 
+                        df4[['tag', 'type', 'node1', 'node2', 'node3', 'node4']]])
         df4 = None
 
         df = pd.DataFrame(areaassign).rename(columns={"Area": "element", "Section": "section"})
-        df.loc[:, 'element'] = "area-" + df.loc[:,['element']].astype(str)
+        df['element'] = df['element'].astype(str)
+        df['element'] = "area-" + df['element']
         self.ofem.element_sections = pd.concat([self.ofem.element_sections, df[["element", "section"]]])
 
         df = pd.DataFrame(areasect).rename(columns={
@@ -953,10 +962,6 @@ class Sap2000Handler:
         self.ofem.supports = pd.concat([self.ofem.supports, df[[
             "point", "ux", "uy", "uz", "rx", "ry", "rz"]]])
 
-        # test writing reading
-        self.ofem.write_excel(self._filename + "_test.xlsx")
-        self.ofem.write_xfem(self._filename + "_test.xfem")
-        # self.ofem.load(self._filename + "_test.xfem")
         return self.ofem
 
     def to_msh_and_open(self, model: str = 'geometry', entities: str = 'types', physicals: str = ''):
