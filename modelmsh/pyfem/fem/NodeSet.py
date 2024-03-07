@@ -29,11 +29,14 @@
 ################################################################################
 
 from numpy import array
-from pyfem.util.itemList import itemList
-from pyfem.util.fileParser import getType
+# from pyfem.util.itemList import itemList
+# from pyfem.util.fileParser import getType
+from ..util.itemList import itemList
+from ..util.fileParser import getType
 import re,sys
 
-from pyfem.util.logger   import getLogger
+# from pyfem.util.logger   import getLogger
+from ..util.logger   import getLogger
 
 logger = getLogger()
 

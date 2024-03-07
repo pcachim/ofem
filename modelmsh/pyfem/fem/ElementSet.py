@@ -28,10 +28,13 @@
 #  event caused by the use of the program.                                     #
 ################################################################################
 
-import re
-from pyfem.util.itemList import itemList
-from pyfem.util.logger   import getLogger
-from pyfem.util.dataStructures import solverStatus
+import re, os
+# from pyfem.util.itemList import itemList
+# from pyfem.util.logger   import getLogger
+# from pyfem.util.dataStructures import solverStatus
+from ..util.itemList import itemList
+from ..util.logger   import getLogger
+from ..util.dataStructures import solverStatus
 
 logger = getLogger()
 
@@ -114,7 +117,7 @@ class ElementSet( itemList ):
         
           line = re.sub('\s{2,}',' ',line)
           a = line.split(';')
-     
+        
           for a0 in a[:-1]:
             b = a0.strip().split(' ')
             
@@ -147,7 +150,7 @@ class ElementSet( itemList ):
           iNodes = mesh.cells_dict[typ][idx]
           self.add( elemID , key , iNodes.tolist() )
           elemID = elemID + 1
-                                 
+
 #-------------------------------------------------------------------------------
 #  add element
 #-------------------------------------------------------------------------------
@@ -165,14 +168,15 @@ class ElementSet( itemList ):
         raise RuntimeError('Missing type for model ' + modelName)
       
       modelType = getattr( modelProps, 'type' )
- 
+
       modelProps.rank       = self.nodes.rank
       modelProps.solverStat = self.solverStat
 
-      element = getattr(__import__('pyfem.elements.'+modelType , globals(), locals(), modelType , 0 ), modelType )
+      # element = getattr(__import__('pyfem.elements.'+modelType , globals(), locals(), modelType , 0 ), modelType )
+      element = getattr(__import__('modelmsh.pyfem.elements.'+modelType , globals(), locals(), modelType , 0 ), modelType )
 
       #Create the element
- 
+
       elem = element( elementNodes , modelProps )
 
       #  Check if the node IDs are valid:

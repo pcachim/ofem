@@ -28,16 +28,27 @@
 #  event caused by the use of the program.                                     #
 ################################################################################
 
-from pyfem.util.dataStructures import Properties
-from pyfem.util.dataStructures import GlobalData
+# from pyfem.util.dataStructures import Properties
+# from pyfem.util.dataStructures import GlobalData
 
-from pyfem.fem.NodeSet     import NodeSet
-from pyfem.fem.ElementSet  import ElementSet
-from pyfem.fem.DofSpace    import DofSpace
-from pyfem.fem.Contact     import Contact
+# from pyfem.fem.NodeSet     import NodeSet
+# from pyfem.fem.ElementSet  import ElementSet
+# from pyfem.fem.DofSpace    import DofSpace
+# from pyfem.fem.Contact     import Contact
 
-from pyfem.util.fileParser import fileParser
-from pyfem.util.logger     import setLogger
+# from pyfem.util.fileParser import fileParser
+# from pyfem.util.logger     import setLogger
+
+from ..util.dataStructures import Properties
+from ..util.dataStructures import GlobalData
+
+from ..fem.NodeSet     import NodeSet
+from ..fem.ElementSet  import ElementSet
+from ..fem.DofSpace    import DofSpace
+from ..fem.Contact     import Contact
+
+from ..util.fileParser import fileParser
+from ..util.logger     import setLogger
 
 import getopt,os.path,pickle
 

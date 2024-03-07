@@ -30,8 +30,10 @@
 
 from numpy import zeros, ones, ix_ , append, repeat, array
 from scipy.sparse import coo_matrix
-from pyfem.util.dataStructures import Properties
-from pyfem.util.dataStructures import elementData
+# from pyfem.util.dataStructures import Properties
+# from pyfem.util.dataStructures import elementData
+from ..util.dataStructures import Properties
+from ..util.dataStructures import elementData
 
 
 #######################################

@@ -36,7 +36,8 @@ class Solver:
 
     solverType = solverProps.type
 
-    exec("from pyfem.solvers."+solverType+" import "+solverType)
+    # exec("from pyfem.solvers."+solverType+" import "+solverType)
+    exec("from modelmsh.pyfem.solvers."+solverType+" import "+solverType)
 
     props.currentModule = "solver"
 

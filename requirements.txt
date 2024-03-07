@@ -16,6 +16,8 @@ fonttools==4.49.0
     # via matplotlib
 gmsh==4.12.2
     # via -r ./requirements.in
+h5py==3.10.0
+    # via -r ./requirements.in
 kiwisolver==1.4.5
     # via matplotlib
 markdown-it-py==3.0.0
@@ -29,9 +31,11 @@ meshio==5.3.5
 numpy==1.23.4
     # via
     #   contourpy
+    #   h5py
     #   matplotlib
     #   meshio
     #   pandas
+    #   scipy
 openpyxl==3.1.2
     # via -r ./requirements.in
 packaging==23.2
@@ -54,6 +58,8 @@ pytz==2024.1
     # via pandas
 rich==13.7.0
     # via meshio
+scipy==1.12.0
+    # via -r ./requirements.in
 six==1.16.0
     # via python-dateutil
 tenacity==8.2.3

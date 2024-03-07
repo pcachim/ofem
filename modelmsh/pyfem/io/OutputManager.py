@@ -47,7 +47,7 @@ class OutputManager:
        if hasattr( moduleProps , "type" ):
          ioType = moduleProps.type
 
-      exec("from pyfem.io."+ioType+" import "+ioType)
+      exec("from modelmsh.pyfem.io."+ioType+" import "+ioType)
 
       self.outman.append(eval(ioType+"( props , globdat )"))
 

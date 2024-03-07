@@ -28,7 +28,8 @@
 #  event caused by the use of the program.                                     #
 ################################################################################
 
-from pyfem.util.dataStructures import Properties
+# from pyfem.util.dataStructures import Properties
+from ..util.dataStructures import Properties
 import re
 
 def containsValue( db , val ):

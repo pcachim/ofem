@@ -32,7 +32,8 @@ from numpy import array, dot, zeros
 import scipy.linalg
 from scipy.sparse import coo_matrix
 
-from pyfem.util.logger   import getLogger
+# from pyfem.util.logger   import getLogger
+from ..util.logger   import getLogger
 
 logger = getLogger()
 

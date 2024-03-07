@@ -33,10 +33,14 @@ import scipy.linalg
 
 from scipy.sparse.linalg   import spsolve
 from scipy.sparse.linalg   import eigsh
-from pyfem.util.itemList   import itemList
-from pyfem.util.fileParser import readNodeTable
-from pyfem.util.logger     import getLogger
-from pyfem.fem.Constrainer import Constrainer
+# from pyfem.util.itemList   import itemList
+# from pyfem.util.fileParser import readNodeTable
+# from pyfem.util.logger     import getLogger
+# from pyfem.fem.Constrainer import Constrainer
+from ..util.itemList   import itemList
+from ..util.fileParser import readNodeTable
+from ..util.logger     import getLogger
+from ..fem.Constrainer import Constrainer
 
 from copy import deepcopy
 

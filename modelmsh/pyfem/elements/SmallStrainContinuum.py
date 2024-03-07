@@ -29,8 +29,10 @@
 ################################################################################
 
 from .Element import Element
-from pyfem.util.shapeFunctions  import getElemShapeData
-from pyfem.util.kinematics      import Kinematics
+# from pyfem.util.shapeFunctions  import getElemShapeData
+# from pyfem.util.kinematics      import Kinematics
+from ..util.shapeFunctions  import getElemShapeData
+from ..util.kinematics      import Kinematics
 from numpy import zeros, dot, outer, ones , eye
 
 class SmallStrainContinuum( Element ):

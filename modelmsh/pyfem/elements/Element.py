@@ -29,7 +29,8 @@
 ################################################################################
 
 from numpy import outer, ones, zeros
-from pyfem.materials.MaterialManager import MaterialManager
+# from pyfem.materials.MaterialManager import MaterialManager
+from ..materials.MaterialManager import MaterialManager
 
 #------------------------------------------------------------------------------
 #

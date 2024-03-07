@@ -29,7 +29,8 @@
 ################################################################################
 
 from numpy import zeros
-from pyfem.util.logger     import getLogger
+#from pyfem.util.logger     import getLogger
+from ..util.logger     import getLogger
 
 logger = getLogger()
 

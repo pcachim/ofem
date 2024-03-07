@@ -31,9 +31,12 @@
 import sys,os
 sys.path.insert(0, os.getcwd() )
 
-from pyfem.io.InputReader   import InputRead
-from pyfem.io.OutputManager import OutputManager
-from pyfem.solvers.Solver   import Solver
+# from pyfem.io.InputReader   import InputRead
+# from pyfem.io.OutputManager import OutputManager
+# from pyfem.solvers.Solver   import Solver
+from ..io.InputReader   import InputRead
+from ..io.OutputManager import OutputManager
+from ..solvers.Solver   import Solver
 
 def run( fileName ):
 

@@ -28,9 +28,11 @@
 #  event caused by the use of the program.                                     #
 ################################################################################
 
-from pyfem.util.BaseModule import BaseModule
 from numpy import ndarray,zeros
-from pyfem.util.logger   import getLogger
+# from pyfem.util.BaseModule import BaseModule
+# from pyfem.util.logger   import getLogger
+from ..util.BaseModule import BaseModule
+from ..util.logger   import getLogger
 
 logger = getLogger()
 

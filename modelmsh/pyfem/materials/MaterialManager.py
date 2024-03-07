@@ -28,7 +28,8 @@
 #  event caused by the use of the program.                                     #
 ################################################################################
 
-from pyfem.util.dataStructures import Properties
+# from pyfem.util.dataStructures import Properties
+from ..util.dataStructures import Properties
 from numpy import zeros
 import copy
 
@@ -39,7 +40,8 @@ class MaterialManager ( list ):
     if hasattr( matProps,"type"):
       matType = matProps.type
 
-      self.material = getattr(__import__('pyfem.materials.'+matType , globals(), locals(), matType , 0 ), matType )
+      # self.material = getattr(__import__('pyfem.materials.'+matType , globals(), locals(), matType , 0 ), matType )
+      self.material = getattr(__import__('modelmsh.pyfem.materials.'+matType , globals(), locals(), matType , 0 ), matType )
     
       self.matlist     = []
       self.matProps    = matProps
