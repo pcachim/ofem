@@ -847,7 +847,7 @@ class Sap2000Handler:
 
         return self._filename + ".msh"
 
-    def to_ofem_structure(self, model: str = 'geometry', entities: str = 'types', physicals: str = ''):
+    def to_ofem_struct(self, model: str = 'geometry', entities: str = 'types', physicals: str = ''):
         """Writes a OFEM mesh file
 
         Args:
@@ -868,7 +868,7 @@ class Sap2000Handler:
         if not self._check_input(filename):
             raise ValueError('Filename id nt in correct format')
 
-        self.ofem = OfemStructure("title stucture")
+        self.ofem = OfemStruct("title stucture")
 
         joints = self.s2k['Joint Coordinates'.upper()]
         elems = self.s2k['Connectivity - Frame'.upper()]
@@ -877,6 +877,8 @@ class Sap2000Handler:
         framesectassign = self.s2k['Frame Section Assignments'.upper()]
         areasect = self.s2k['Area Section Properties'.upper()]
         areaassign = self.s2k['Area Section Assignments'.upper()]
+        material = self.s2k['Material Properties 02 - Basic Mechanical Properties'.upper()]
+        supports = self.s2k['Joint Restraint Assignments'.upper()]
         groups = self.s2k['Groups 1 - Definitions'.upper()]
         groupsassign = self.s2k['Groups 2 - Assignments'.upper()]
 
@@ -893,7 +895,7 @@ class Sap2000Handler:
 
         df = pd.DataFrame(framesectassign).rename(columns={"Frame": "element", "AnalSect": "section"})
         df.loc[:, 'element'] = "line-" + df.loc[:,['element']].astype(str)
-        self.ofem.element_sections = pd.concat([self.ofem.sections, df[["element", "section"]]])
+        self.ofem.element_sections = pd.concat([self.ofem.element_sections, df[["element", "section"]]])
 
         df = pd.DataFrame(framesect).rename(columns={
             "SectionName": "section", "Material": "material",
@@ -902,11 +904,11 @@ class Sap2000Handler:
         df.loc[:, "type"] = "line"
         df.loc[:, "angle"] = 0.0
         df.loc[:, "design"] = "none"
-        
+
         self.ofem.sections = pd.concat([self.ofem.sections, 
             df[["section", "type", "material", "design", "area", "inertia3", 
                 "inertia2", "torsion", "angle"]]])
-                            
+
         # ELEMENTS - AREAS
         df = pd.DataFrame(areas).rename(columns={"Area": "tag", "Joint1": "node1", "Joint2": "node2", 
                                         "Joint3": "node3", "Joint4": "node4"})
@@ -925,19 +927,37 @@ class Sap2000Handler:
 
         df = pd.DataFrame(areaassign).rename(columns={"Area": "element", "Section": "section"})
         df.loc[:, 'element'] = "area-" + df.loc[:,['element']].astype(str)
-        self.ofem.element_sections = pd.concat([self.ofem.sections, df[["element", "section"]]])
+        self.ofem.element_sections = pd.concat([self.ofem.element_sections, df[["element", "section"]]])
 
         df = pd.DataFrame(areasect).rename(columns={
             "Section": "section", "Material": "material", "Thickness": "thick"})
         df.loc[:, "type"] = "area"
         df.loc[:, "angle"] = 0.0
         df.loc[:, "design"] = "none"
-        
+
         self.ofem.sections = pd.concat([self.ofem.sections, 
             df[["section", "type", "material", "design", "thick", "angle"]]])
 
+        # MATERIALS
+        df = pd.DataFrame(material).rename(columns={"Material": "material",                                         
+            "E1": "young", "U12": "poisson", "G12": "shear", 
+            "UnitMass": "mass", "UnitWeight": "weight", "A1": "alpha"})
+        df.loc[:, 'damping'] = 0.02
+        self.ofem.materials = pd.concat([self.ofem.materials, 
+            df[['material', 'young', 'poisson', 'mass', 'shear', 'damping', 'alpha', 'weight']]])
+        
+        # SUPPORTS
+        df = pd.DataFrame(supports).rename(columns={"Joint": "point", 
+            "U1": "ux", "U2": "uy", "U3": "uz", "R1": "rx", "R2": "ry", "R3": "rz"})
+        df.loc[:,['point']].astype(str)
+        self.ofem.supports = pd.concat([self.ofem.supports, df[[
+            "point", "ux", "uy", "uz", "rx", "ry", "rz"]]])
+
+        # test writing reading
         self.ofem.write_excel(self._filename + "_test.xlsx")
-        return
+        self.ofem.write_xfem(self._filename + "_test.xfem")
+        # self.ofem.load(self._filename + "_test.xfem")
+        return self.ofem
 
     def to_msh_and_open(self, model: str = 'geometry', entities: str = 'types', physicals: str = ''):
 
@@ -961,4 +981,4 @@ class Sap2000Handler:
 
 if __name__ == "__main__":
     s2000 = Sap2000Handler("tests/test.xlsx")
-    s2000.to_ofem_structure()
+    s2000.to_ofem_struct()

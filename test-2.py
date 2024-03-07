@@ -14,7 +14,7 @@ print(Path.home())
 #fname = os.path.join( os.getcwd(), "tests/test.s2k")
 fname = os.path.join( os.getcwd(), "tests/test.xlsx")
 s2000 = msh.Sap2000Handler(fname)
-s2000.to_ofem_structure()
+s2000.to_ofem_struct()
 #s2000.to_msh_and_open(entities='sections', physicals='sections')
 
 logging.debug("Test finished.")

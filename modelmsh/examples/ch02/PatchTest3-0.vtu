@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" compressor="vtkZLibDataCompressor">
+<UnstructuredGrid>
+<Piece NumberOfPoints="8" NumberOfCells="10">
+<PointData>
+<DataArray type="Float64" Name="displacement" NumberOfComponents="3" format="ascii" >
+0.0 0.0  0.
+0.00024 0.00012  0.
+0.0003 0.00024  0.
+6e-05 0.00012  0.
+4.9999999999999975e-05 3.999999999999998e-05  0.
+0.00019499999999999997 0.00011999999999999996  0.
+0.00019999999999999996 0.00015999999999999999  0.
+0.00011999999999999994 0.00011999999999999999  0.
+</DataArray>
+<DataArray type="Float64" Name="S11" NumberOfComponents="1" format="ascii" >
+1333.333333333333 
+1333.333333333334 
+1333.333333333334 
+1333.333333333333 
+1333.3333333333333 
+1333.3333333333335 
+1333.333333333334 
+1333.3333333333335 
+</DataArray>
+<DataArray type="Float64" Name="S22" NumberOfComponents="1" format="ascii" >
+1333.333333333333 
+1333.3333333333335 
+1333.3333333333337 
+1333.3333333333333 
+1333.3333333333335 
+1333.3333333333335 
+1333.333333333334 
+1333.3333333333337 
+</DataArray>
+<DataArray type="Float64" Name="S12" NumberOfComponents="1" format="ascii" >
+399.99999999999983 
+400.0 
+400.0000000000003 
+400.00000000000017 
+399.99999999999983 
+399.9999999999998 
+399.9999999999999 
+400.0000000000001 
+</DataArray>
+</PointData>
+<CellData>
+</CellData>
+<Points>
+<DataArray type="Float64" Name="Points" NumberOfComponents="3" format="ascii">
+0.0 0.0 0.0
+0.24 0.0 0.0
+0.24 0.12 0.0
+0.0 0.12 0.0
+0.04 0.02 0.0
+0.18 0.03 0.0
+0.16 0.08 0.0
+0.08 0.08 0.0
+</DataArray>
+</Points>
+<Cells>
+<DataArray type="Int64" Name="connectivity" format="ascii">
+0 1 5 
+0 5 4 
+3 0 4 
+3 4 7 
+1 2 6 
+1 6 5 
+2 3 7 
+2 7 6 
+4 5 6 
+4 6 7 
+</DataArray>
+<DataArray type="Int64" Name="offsets" format="ascii">
+3
+6
+9
+12
+15
+18
+21
+24
+27
+30
+</DataArray>
+<DataArray type="UInt8" Name="types" format="ascii">
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+</DataArray>
+</Cells>
+</Piece>
+</UnstructuredGrid>
+</VTKFile>

@@ -4,10 +4,8 @@ from pathlib import Path
 from typing import Union
 import numpy as np
 import pandas as pd
-import meshio
-import re
-import gmsh
-import sys
+import meshio, gmsh
+import sys, io, json, zipfile, re
 
 elemtypes = list(common.ofem_meshio.keys())
 
@@ -15,10 +13,7 @@ elemtypes = list(common.ofem_meshio.keys())
 class OfemMesh:
     title: str
     _points = pd.DataFrame(columns= ["tag", "x", "y", "z"])
-    _elements = pd.DataFrame(columns= ["tag", "type",
-        "node1", "node2", "node3", "node4", "node5", "node6", "node7", "node8", "node9",
-        "node10", "node11", "node12", "node13", "node14", "node15", "node16", "node17", "node18", 
-        "node19", "node20", "node21", "node22", "node23", "node24", "node25", "node26", "noode27"])
+    _elements = pd.DataFrame(columns= ["tag", "type", "node1", "node2"])
     # "convversion from tags to id"
     _nodetag_to_id = {}
     _elemtag_to_id = {}
@@ -212,22 +207,25 @@ class OfemMesh:
 
 
 @dataclass
-class OfemStructure:
+class OfemStruct:
     title: str
     _mesh: OfemMesh = field(init=False)
     # section types are: FRAME, SHELL, SPRING,
     _sections = pd.DataFrame(columns= ["section", "type", "material"])
-    _supports = pd.DataFrame(columns= ["tag", "type", "props"])
+    _supports = pd.DataFrame(columns= ["point", "ux", "uy", "uz", "rx", "ry", "rz"])
     # material types are: GENERAL, CONCRETE, STEEL, TIMBER, SPRIN, SOIL
-    _materials = pd.DataFrame(columns= ["name", "type", "props"])
+    _materials = pd.DataFrame(columns= ["material", "type", "props"])
     _elemsections = pd.DataFrame(columns= ["element", "section"])
-    _nodesupports = pd.DataFrame(columns= ["node", "support"])
 
     def __post_init__(self):
         # Initialize field2 with the value of field1
         self._mesh: OfemMesh = OfemMesh(self.title)
 
     def read_excel(self, filename: str):
+        path = Path(filename)
+        if path.suffix == ".xfem":
+            self.read_xfem(filename)
+
         dfs = pd.read_excel(filename, sheet_name=None)
 
         # coordinates
@@ -250,15 +248,6 @@ class OfemStructure:
         if "elementsections" in dfs:
             self._elemsections = dfs["elementsections"]
 
-        if "framesections" in dfs:
-            self._framesections = dfs["framesections"]
-            
-        if "shellsections" in dfs:
-            self._shellsections = dfs["shellsections"]
-
-        if "springsections" in dfs:
-            self._springsections = dfs["springsections"]
-
         # supports
         if "supports" in dfs:
             self._supports = dfs["supports"]
@@ -270,6 +259,10 @@ class OfemStructure:
         return
 
     def write_excel(self, filename: str):
+        path = Path(filename)
+        if path.suffix != ".xlsx":
+            filename = path.with_suffix(".xlsx")
+    
         with pd.ExcelWriter(filename) as writer:
             # Write each DataFrame to a different sheet
             self.mesh._points.to_excel(writer, sheet_name='points', index=False)
@@ -280,15 +273,54 @@ class OfemStructure:
             self._materials.to_excel(writer, sheet_name='materials', index=False)
         return
 
+    def write_xfem(self, filename: str):
+        path = Path(filename)
+        if path.suffix != ".xfem":
+            filename = path.with_suffix(".xfem")
+
+        files = self.to_dict()
+        json_data = json.dumps(files, indent=2).replace('NaN', 'null')
+        with open(filename+'.json', 'w') as f:
+            f.write(json_data)
+
+        # Create an in-memory buffer
+        json_buffer = io.BytesIO(json_data.encode('utf-8'))
+        # Reset buffer position to the beginning
+        json_buffer.seek(0)
+        # Create a ZIP file in-memory and add the JSON buffer
+        with zipfile.ZipFile(filename, 'w') as zip_file:
+                zip_file.writestr(path.stem+'.json', json_buffer.read().decode('utf-8'))        
+        return
+    
+    def read_xfem(self, filename: str): 
+        path = Path(filename)
+        if path.suffix != ".xfem":
+            raise ValueError(f"File {filename} is not a .xfem file")
+
+        with zipfile.ZipFile(filename, 'r') as zip_file:
+            with zip_file.open(path.stem+'.json') as json_file:
+                data = json.load(json_file)
+                self.from_dict(data)
+        return
+
     def to_dict(self):
         return {
-            "points": self.mesh._points, 
-            "elements": self.mesh._elements, 
-            "sections": self._sections,
-            "elementsections": self._elemsections,
-#            "supports": self._supports,
-            "materials": self._materials
+            "points": self.mesh._points.to_dict(orient="records"), 
+            "elements": self.mesh._elements.to_dict(orient="records"), 
+            "sections": self._sections.to_dict(orient="records"),
+            "elementsections": self._elemsections.to_dict(orient="records"),
+            "supports": self._supports.to_dict(orient="records"),
+            "materials": self._materials.to_dict(orient="records")
         }
+
+    def from_dict(self, data: dict):
+        self.mesh._points = pd.DataFrame(data["points"])
+        self.mesh._elements = pd.DataFrame(data["elements"])
+        self._sections = pd.DataFrame(data["sections"])
+        self._elemsections = pd.DataFrame(data["elementsections"])
+        self._supports = pd.DataFrame(data["supports"])
+        self._materials = pd.DataFrame(data["materials"])
+        return
 
     @property
     def mesh(self):

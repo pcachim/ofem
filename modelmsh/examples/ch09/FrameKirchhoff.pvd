@@ -1,0 +1,46 @@
+<VTKFile byte_order='LittleEndian' type='Collection' version='0.1'>
+<Collection>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-0.vtu' groups='' part='0' timestep='0'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-1.vtu' groups='' part='0' timestep='1'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-2.vtu' groups='' part='0' timestep='2'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-3.vtu' groups='' part='0' timestep='3'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-4.vtu' groups='' part='0' timestep='4'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-5.vtu' groups='' part='0' timestep='5'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-6.vtu' groups='' part='0' timestep='6'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-7.vtu' groups='' part='0' timestep='7'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-8.vtu' groups='' part='0' timestep='8'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-9.vtu' groups='' part='0' timestep='9'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-10.vtu' groups='' part='0' timestep='10'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-11.vtu' groups='' part='0' timestep='11'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-12.vtu' groups='' part='0' timestep='12'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-13.vtu' groups='' part='0' timestep='13'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-14.vtu' groups='' part='0' timestep='14'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-15.vtu' groups='' part='0' timestep='15'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-16.vtu' groups='' part='0' timestep='16'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-17.vtu' groups='' part='0' timestep='17'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-18.vtu' groups='' part='0' timestep='18'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-19.vtu' groups='' part='0' timestep='19'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-20.vtu' groups='' part='0' timestep='20'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-21.vtu' groups='' part='0' timestep='21'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-22.vtu' groups='' part='0' timestep='22'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-23.vtu' groups='' part='0' timestep='23'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-24.vtu' groups='' part='0' timestep='24'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-25.vtu' groups='' part='0' timestep='25'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-26.vtu' groups='' part='0' timestep='26'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-27.vtu' groups='' part='0' timestep='27'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-28.vtu' groups='' part='0' timestep='28'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-29.vtu' groups='' part='0' timestep='29'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-30.vtu' groups='' part='0' timestep='30'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-31.vtu' groups='' part='0' timestep='31'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-32.vtu' groups='' part='0' timestep='32'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-33.vtu' groups='' part='0' timestep='33'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-34.vtu' groups='' part='0' timestep='34'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-35.vtu' groups='' part='0' timestep='35'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-36.vtu' groups='' part='0' timestep='36'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-37.vtu' groups='' part='0' timestep='37'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-38.vtu' groups='' part='0' timestep='38'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-39.vtu' groups='' part='0' timestep='39'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-40.vtu' groups='' part='0' timestep='40'/>
+<DataSet file='/Users/paulocachim/Library/CloudStorage/Box-Box/Development/PyFEM/examples/ch09/FrameKirchhoff-41.vtu' groups='' part='0' timestep='41'/>
+</Collection>
+</VTKFile>

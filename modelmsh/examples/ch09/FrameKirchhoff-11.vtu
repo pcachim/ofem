@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" compressor="vtkZLibDataCompressor">
+<UnstructuredGrid>
+<Piece NumberOfPoints="21" NumberOfCells="10">
+<PointData>
+<DataArray type="Float64" Name="displacement" NumberOfComponents="3" format="ascii" >
+0.0 0.0  0.
+-0.3455305269228842 0.0  0.
+-13.421816403276626 -3.803260060434482  0.
+-0.33755659442031405 0.0  0.
+-19.98855004543369 -4.909768573149056  0.
+0.3632078463798203 0.0  0.
+-13.311440959675917 -6.07046075448362  0.
+0.7883881987654385 0.0  0.
+2.9690745105419687 -11.753921289635741  0.
+0.16594642864754122 0.0  0.
+24.281549789076895 -21.227859182913154  0.
+-0.9414367972346691 0.0  0.
+17.847312716856266 -38.53046803132296  0.
+-0.38574066234391413 0.0  0.
+16.664603588230456 -45.19467611527107  0.
+0.4081666021036088 0.0  0.
+15.29480587353634 -37.79492076225903  0.
+0.6848982084775525 0.0  0.
+9.648430237483312 -21.50305941616814  0.
+0.3213031316635576 0.0  0.
+0.0 0.0  0.
+</DataArray>
+</PointData>
+<CellData>
+</CellData>
+<Points>
+<DataArray type="Float64" Name="Points" NumberOfComponents="3" format="ascii">
+0.0 0.0 0.0
+0.0 12.0 0.0
+0.0 24.0 0.0
+0.0 36.0 0.0
+0.0 48.0 0.0
+0.0 60.0 0.0
+0.0 72.0 0.0
+0.0 84.0 0.0
+0.0 96.0 0.0
+0.0 108.0 0.0
+0.0 120.0 0.0
+12.0 120.0 0.0
+24.0 120.0 0.0
+36.0 120.0 0.0
+48.0 120.0 0.0
+60.0 120.0 0.0
+72.0 120.0 0.0
+84.0 120.0 0.0
+96.0 120.0 0.0
+108.0 120.0 0.0
+120.0 120.0 0.0
+</DataArray>
+</Points>
+<Cells>
+<DataArray type="Int64" Name="connectivity" format="ascii">
+0 2
+2 4
+4 6
+6 8
+8 10
+10 12
+12 14
+14 16
+16 18
+18 20
+</DataArray>
+<DataArray type="Int64" Name="offsets" format="ascii">
+2
+4
+6
+8
+10
+12
+14
+16
+18
+20
+</DataArray>
+<DataArray type="UInt8" Name="types" format="ascii">
+3
+3
+3
+3
+3
+3
+3
+3
+3
+3
+</DataArray>
+</Cells>
+</Piece>
+</UnstructuredGrid>
+</VTKFile>
