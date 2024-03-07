@@ -27,11 +27,11 @@
 #  event caused by the use of the program.                                 #
 ############################################################################
 
-import sys,os
+import sys, os, io
 from pathlib import Path
 sys.path.insert(0, os.getcwd() )
 
-import time
+from datetime import datetime, timedelta
 
 # from pyfem.io.InputReader   import InputReader
 # from pyfem.io.OutputManager import OutputManager
@@ -41,17 +41,25 @@ from .pyfem.io.OutputManager import OutputManager
 from .pyfem.solvers.Solver   import Solver
 
 def run(filename: str):
+  # captures the current working directory
   safe_cwd = os.getcwd()
   path = Path(safe_cwd)
   path = path / filename
   fname = path.name
   os.chdir(str(path.parent))
 
-  t1 = time.time()
+  # Capture the output in a StringIO object
+  captured_output = io.StringIO()
+  # Redirect the output of the function to the StringIO object
+  original_stdout = sys.stdout
+  sys.stdout = captured_output
+  original_stderr = sys.stderr
+  sys.stderr = captured_output
+
+  t1 = datetime.now()
+  print(f"Started at time = {t1:%Y-%m-%d %H:%M:%S}\n")
 
   props,globdat = InputReader( [None, fname] )
-  
-  os.chdir(safe_cwd)
 
   solver = Solver        ( props , globdat )
   output = OutputManager ( props , globdat )
@@ -60,12 +68,29 @@ def run(filename: str):
     solver.run( props , globdat )
     output.run( props , globdat )
 
-  t2 = time.time()
+  t2 = datetime.now()
+  total = (t2-t1).total_seconds()
 
-  total = t2-t1
-  print("Time elapsed = ",total," [s].\n")
-
+  print(f"Finished at time = {t2:%Y-%m-%d %H:%M:%S}")
+  print(f"Time elapsed = {total} [s].\n")
   print("PyFem analysis terminated successfully.")
 
+  # Restores the original working directory
+  os.chdir(safe_cwd)
 
+  # Restore the original stdout and stderr
+  sys.stdout = original_stdout
+  sys.stderr = original_stderr
+
+  # Get the captured output as a formatted string
+  formatted_output = captured_output.getvalue()
+
+  # Write output to a file
+  path = Path(filename)
+  fname = path.parent / path.stem
+  fname = fname.with_suffix(".txt")
+  with open(fname, "w") as f:
+    f.write(formatted_output)
+
+  print("PyFem analysis terminated successfully.")
 

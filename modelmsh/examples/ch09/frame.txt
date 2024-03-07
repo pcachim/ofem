@@ -1,0 +1,535 @@
+Started at time = 2024-03-07 14:53:15
+
+  Reading nodes ................
+  Number of nodes ............     11
+
+  Reading elements .............
+  Number of elements .........     10
+  Number of  groups ..........      1
+  -----------------------------------
+    name                       #elems
+    ---------------------------------
+    BeamElem                       10
+
+  Reading constraints ..........
+  Reading external forces ......
+
+  Starting Riks arclength solver
+
+  Riks solver .................
+      =============================================
+      Load step 1
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 1.2343e-02
+      Iteration    2   : 6.7580e-05
+      Iteration    3   : 2.4426e-11
+      ---------------------------------------------
+      Converged in 3 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 2
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 4.5468e-02
+      Iteration    2   : 2.3636e-03
+      Iteration    3   : 2.1186e-09
+      ---------------------------------------------
+      Converged in 3 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 3
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 7.5025e-02
+      Iteration    2   : 1.2491e-02
+      Iteration    3   : 5.0217e-08
+      ---------------------------------------------
+      Converged in 3 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 4
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 1.3220e-01
+      Iteration    2   : 5.1565e-02
+      Iteration    3   : 8.7482e-07
+      ---------------------------------------------
+      Converged in 3 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 5
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 2.7049e-01
+      Iteration    2   : 1.5016e-01
+      Iteration    3   : 3.0344e-05
+      Iteration    4   : 1.9254e-08
+      ---------------------------------------------
+      Converged in 4 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 6
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 4.7423e-01
+      Iteration    2   : 1.6152e-01
+      Iteration    3   : 2.5360e-04
+      Iteration    4   : 2.6256e-07
+      ---------------------------------------------
+      Converged in 4 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 7
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 8.1294e-01
+      Iteration    2   : 9.8154e-02
+      Iteration    3   : 4.7112e-04
+      Iteration    4   : 1.2755e-07
+      ---------------------------------------------
+      Converged in 4 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 8
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 1.3651e+00
+      Iteration    2   : 4.3816e-02
+      Iteration    3   : 1.9721e-04
+      Iteration    4   : 6.7242e-09
+      ---------------------------------------------
+      Converged in 4 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 9
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 2.1583e+00
+      Iteration    2   : 1.2968e-01
+      Iteration    3   : 5.2661e-03
+      Iteration    4   : 7.3623e-06
+      ---------------------------------------------
+      Converged in 4 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 10
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 3.2986e+00
+      Iteration    2   : 4.6339e-01
+      Iteration    3   : 5.0078e-02
+      Iteration    4   : 1.0561e-03
+      Iteration    5   : 5.2326e-07
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 11
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 2.7188e+00
+      Iteration    2   : 6.5075e-01
+      Iteration    3   : 6.9052e-02
+      Iteration    4   : 3.1985e-03
+      Iteration    5   : 4.2021e-06
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 12
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 1.5653e+00
+      Iteration    2   : 4.3333e-01
+      Iteration    3   : 3.4893e-02
+      Iteration    4   : 2.0384e-04
+      Iteration    5   : 5.9600e-08
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 13
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 2.9807e+00
+      Iteration    2   : 4.7718e-01
+      Iteration    3   : 2.9877e-02
+      Iteration    4   : 4.6310e-05
+      Iteration    5   : 1.8898e-08
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 14
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 1.6621e+00
+      Iteration    2   : 1.1618e+00
+      Iteration    3   : 9.3464e-02
+      Iteration    4   : 3.5921e-03
+      Iteration    5   : 2.7787e-06
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 15
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 2.7564e+00
+      Iteration    2   : 1.8658e+00
+      Iteration    3   : 1.2919e-01
+      Iteration    4   : 7.0020e-03
+      Iteration    5   : 3.8157e-06
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 16
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 3.3271e+00
+      Iteration    2   : 2.4032e+00
+      Iteration    3   : 9.7808e-02
+      Iteration    4   : 4.3088e-03
+      Iteration    5   : 6.6764e-07
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 17
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 4.3266e+00
+      Iteration    2   : 4.1661e+00
+      Iteration    3   : 3.6789e-02
+      Iteration    4   : 3.3424e-03
+      Iteration    5   : 2.8003e-08
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 18
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 7.3125e+00
+      Iteration    2   : 1.6562e+01
+      Iteration    3   : 9.2376e-01
+      Iteration    4   : 4.9178e-03
+      Iteration    5   : 1.9919e-05
+      Iteration    6   : 2.7902e-11
+      ---------------------------------------------
+      Converged in 6 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 19
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 8.6386e+00
+      Iteration    2   : 7.3867e+01
+      Iteration    3   : 8.0594e+00
+      Iteration    4   : 1.5062e+00
+      Iteration    5   : 2.6174e+00
+      Iteration    6   : 3.3674e-02
+      Iteration    7   : 5.7647e-05
+      Iteration    8   : 5.6462e-10
+      ---------------------------------------------
+      Converged in 8 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 20
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 3.0961e+00
+      Iteration    2   : 1.0486e+01
+      Iteration    3   : 3.6255e-01
+      Iteration    4   : 1.0166e-02
+      Iteration    5   : 9.4745e-07
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 21
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 5.1126e+00
+      Iteration    2   : 2.4719e+01
+      Iteration    3   : 2.1309e+00
+      Iteration    4   : 2.0373e-01
+      Iteration    5   : 4.5653e-05
+      Iteration    6   : 5.7813e-09
+      ---------------------------------------------
+      Converged in 6 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 22
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 9.1938e+00
+      Iteration    2   : 1.1765e+02
+      Iteration    3   : 9.1429e+00
+      Iteration    4   : 2.2531e+00
+      Iteration    5   : 1.3979e-02
+      Iteration    6   : 1.4847e-05
+      Iteration    7   : 4.7224e-11
+      ---------------------------------------------
+      Converged in 7 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 23
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 1.1008e+01
+      Iteration    2   : 2.0418e+02
+      Iteration    3   : 2.1004e+00
+      Iteration    4   : 2.0043e-02
+      Iteration    5   : 2.0727e-07
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 24
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 5.0382e+02
+      Iteration    2   : 1.0065e+01
+      Iteration    3   : 1.6346e-01
+      Iteration    4   : 2.3090e-04
+      Iteration    5   : 6.1859e-10
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 25
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 8.0452e+00
+      Iteration    2   : 1.0004e+00
+      Iteration    3   : 1.7538e-03
+      Iteration    4   : 1.4054e-06
+      ---------------------------------------------
+      Converged in 4 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 26
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 3.6621e+00
+      Iteration    2   : 1.0581e+00
+      Iteration    3   : 4.9985e-03
+      Iteration    4   : 1.0082e-05
+      Iteration    5   : 1.2861e-11
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 27
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 1.1497e+00
+      Iteration    2   : 2.4027e+00
+      Iteration    3   : 5.6557e-03
+      Iteration    4   : 7.2476e-04
+      Iteration    5   : 1.2789e-10
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 28
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 4.6403e-01
+      Iteration    2   : 1.4098e+00
+      Iteration    3   : 2.4169e-03
+      Iteration    4   : 5.3600e-04
+      Iteration    5   : 1.1191e-10
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 29
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 2.9607e-01
+      Iteration    2   : 4.3407e-01
+      Iteration    3   : 6.7019e-04
+      Iteration    4   : 1.8961e-05
+      Iteration    5   : 6.5505e-12
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 30
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 2.5872e-01
+      Iteration    2   : 1.1376e-01
+      Iteration    3   : 5.6879e-05
+      Iteration    4   : 6.0532e-08
+      ---------------------------------------------
+      Converged in 4 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 31
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 4.1091e-01
+      Iteration    2   : 6.3005e-02
+      Iteration    3   : 7.2149e-05
+      Iteration    4   : 2.1623e-09
+      ---------------------------------------------
+      Converged in 4 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 32
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 7.0048e-01
+      Iteration    2   : 8.8582e-02
+      Iteration    3   : 8.0218e-04
+      Iteration    4   : 2.5588e-07
+      ---------------------------------------------
+      Converged in 4 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 33
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 1.0219e+00
+      Iteration    2   : 1.8361e-01
+      Iteration    3   : 5.8496e-03
+      Iteration    4   : 1.7504e-05
+      Iteration    5   : 8.2202e-11
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 34
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 1.6538e+00
+      Iteration    2   : 3.3363e-01
+      Iteration    3   : 6.8694e-03
+      Iteration    4   : 3.1884e-05
+      Iteration    5   : 9.6431e-11
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 35
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 3.0785e+00
+      Iteration    2   : 3.9342e-01
+      Iteration    3   : 6.9558e-03
+      Iteration    4   : 2.3261e-05
+      Iteration    5   : 1.8915e-10
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 36
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 2.4450e+01
+      Iteration    2   : 5.4514e-01
+      Iteration    3   : 1.2384e-02
+      Iteration    4   : 2.5722e-05
+      Iteration    5   : 4.5963e-11
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 37
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 3.4162e+00
+      Iteration    2   : 1.6623e+00
+      Iteration    3   : 6.4167e-02
+      Iteration    4   : 1.0057e-04
+      Iteration    5   : 2.9846e-10
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 38
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 1.9497e+00
+      Iteration    2   : 1.0214e+00
+      Iteration    3   : 1.1287e-01
+      Iteration    4   : 1.8884e-04
+      Iteration    5   : 4.7710e-09
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 39
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 2.1169e+00
+      Iteration    2   : 4.9153e-01
+      Iteration    3   : 2.5259e-01
+      Iteration    4   : 7.0904e-04
+      Iteration    5   : 1.2200e-06
+      ---------------------------------------------
+      Converged in 5 iterations
+  Writing mesh .................
+  Riks solver .................
+      =============================================
+      Load step 40
+      =============================================
+      Newton-Raphson   : L2-norm residual
+      Iteration    1   : 5.1729e+00
+      Iteration    2   : 4.7648e-01
+      Iteration    3   : 1.5045e+00
+      Iteration    4   : 1.0195e-01
+      Iteration    5   : 1.1823e-01
+      Iteration    6   : 4.1018e-04
+      Iteration    7   : 3.5706e-05
+      Iteration    8   : 1.1527e-10
+      ---------------------------------------------
+      Converged in 8 iterations
+  Writing mesh .................
+Finished at time = 2024-03-07 14:53:21
+Time elapsed = 6.492145 [s].
+
+PyFem analysis terminated successfully.

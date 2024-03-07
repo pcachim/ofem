@@ -28,8 +28,10 @@
 #  event caused by the use of the program.                                     #
 ################################################################################
 
-from pyfem.util.BaseModule import BaseModule
-from pyfem.util.dataStructures import Properties
+# from pyfem.util.BaseModule import BaseModule
+# from pyfem.util.dataStructures import Properties
+from ..util.BaseModule import BaseModule
+from ..util.dataStructures import Properties
 from pylab import plot, show, xlabel, ylabel, draw, ion, figure, gcf
 from numpy import ndarray,zeros
 

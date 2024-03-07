@@ -79,7 +79,7 @@ class ExplicitSolver ( BaseModule ):
     globdat.dofs.setConstrainFactor(lam)
 
     acce = globdat.dofs.solve( self.Mlumped , lam*fhat-fint )
-       
+
     velo += 0.5 * stat.dtime * acce
 
     globdat.acce[:] = acce[:]

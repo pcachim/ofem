@@ -28,12 +28,13 @@
 #  event caused by the use of the program.                                     #
 ################################################################################
 
-from pyfem.util.BaseModule import BaseModule
-
 from numpy import zeros, array, dot
-from pyfem.fem.Assembly import assembleTangentStiffness
-
-from pyfem.util.logger   import getLogger
+# from pyfem.util.BaseModule import BaseModule
+# from pyfem.fem.Assembly import assembleTangentStiffness
+# from pyfem.util.logger   import getLogger
+from ..util.BaseModule import BaseModule
+from ..fem.Assembly import assembleTangentStiffness
+from ..util.logger   import getLogger
 
 logger = getLogger()
 
