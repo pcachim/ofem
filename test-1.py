@@ -1,9 +1,9 @@
-import modelmsh as msh
 import math
 import os
 import logging
 import pathlib
-from modelmsh import ofemlib
+import ofempy
+from ofempy import ofemlib, sap2000, ofemSolver, ofemResults
 from pathlib import Path
 
 
@@ -15,10 +15,10 @@ print(Path.home())
 # Test ofem
 fname = os.path.join( os.getcwd(), "tests/cyl2")
 ofile = ofemlib.OfemlibFile(fname)
-msh.ofemSolver(fname, 'd', 1.0e-6)
+ofemSolver(fname, 'd', 1.0e-6)
 options = {'csryn': 'n', 'ksres': 2, 'lcaco': 'c'}
-codes = [msh.ofemlib.DI_CSV, msh.ofemlib.AST_CSV, msh.ofemlib.EST_CSV]
-msh.ofemResults(fname, codes, **options)
+codes = [ofemlib.DI_CSV, ofemlib.AST_CSV, ofemlib.EST_CSV]
+ofemResults(fname, codes, **options)
 
 
 # Test ofemnl
@@ -37,8 +37,8 @@ msh.ofemResults(fname, codes, **options)
 
 fname = os.path.join( os.getcwd(), "tests/demo.gldat")
 mat = {'E': 30000000, 'nu': 0.3, 'rho': 25.0, 'alpha': 1.0e-5}
-slab = msh.Slab()
-slab.addGeometry(msh.meshstruct.CIRCULAR_WITH_HOLE, (0, 0, 0), 3, 1, 0.2,
+slab = ofempy.Slab()
+slab.addGeometry(ofempy.meshstruct.CIRCULAR_WITH_HOLE, (0, 0, 0), 3, 1, 0.2,
                  boundary=[0, 0, 1, 1], material=mat, thick=0.25, load=-10.0)
 
 # slab.addGeometry(msh.meshstruct.CIRCULAR_QUARTER, (0, 0, 0), 3, 0*math.pi/180, 0.2,
@@ -61,7 +61,7 @@ slab.run()
 
 #fname = os.path.join( os.getcwd(), "tests/test.s2k")
 fname = os.path.join( os.getcwd(), "tests/test.xlsx")
-s2000 = msh.Sap2000Handler(fname)
+s2000 = ofempy.Sap2000Handler(fname)
 # s2000.to_femix()
 # fname = os.path.join( os.getcwd(), "test.xlsx")
 # s2000.read_excel(fname, 'pandas')

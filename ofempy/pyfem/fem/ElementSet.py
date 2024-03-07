@@ -173,7 +173,7 @@ class ElementSet( itemList ):
       modelProps.solverStat = self.solverStat
 
       # element = getattr(__import__('pyfem.elements.'+modelType , globals(), locals(), modelType , 0 ), modelType )
-      element = getattr(__import__('modelmsh.pyfem.elements.'+modelType , globals(), locals(), modelType , 0 ), modelType )
+      element = getattr(__import__('ofempy.pyfem.elements.'+modelType , globals(), locals(), modelType , 0 ), modelType )
 
       #Create the element
 

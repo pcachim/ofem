@@ -883,17 +883,17 @@ class Sap2000Handler:
         # groupsassign = self.s2k['Groups 2 - Assignments'.upper()]
 
         # JOINTS
-        df = pd.DataFrame(joints).rename(columns={"Joint": "tag", "XorR": "x", "Y": "y", "Z": "z"})
-        df.loc[:, ["tag"]].astype(str)
-        self.ofem.points = pd.concat([self.ofem.points, df[['tag', 'x', 'y', 'z']]])
+        df = pd.DataFrame(joints).rename(columns={"Joint": "point", "XorR": "x", "Y": "y", "Z": "z"})
+        df.loc[:, ["point"]].astype(str)
+        self.ofem.points = pd.concat([self.ofem.points, df[['point', 'x', 'y', 'z']]])
 
         # ELEMENTS - FRAMES
-        df = pd.DataFrame(elems).rename(columns={"Frame": "tag", "JointI": "node1", "JointJ": "node2"})
+        df = pd.DataFrame(elems).rename(columns={"Frame": "element", "JointI": "node1", "JointJ": "node2"})
         df.loc[:, "type"] = "line2"
         # df.loc[:, 'tag'] = df.loc[:, 'tag'].astype(str)
-        df['tag'] = df['tag'].astype(str)
-        df.loc[:, 'tag'] = "line-" + df['tag'].astype(str)
-        self.ofem.elements = pd.concat([self.ofem.elements, df[['tag', 'type', 'node1', 'node2']]])
+        df['element'] = df['element'].astype(str)
+        df.loc[:, 'element'] = "line-" + df['element'].astype(str)
+        self.ofem.elements = pd.concat([self.ofem.elements, df[['element', 'type', 'node1', 'node2']]])
 
         df = pd.DataFrame(framesectassign).rename(columns={"Frame": "element", "AnalSect": "section"})
         df['element'] = df['element'].astype(str)
@@ -913,24 +913,24 @@ class Sap2000Handler:
                 "inertia2", "torsion", "angle"]]])
 
         # ELEMENTS - AREAS
-        df = pd.DataFrame(areas).rename(columns={"Area": "tag", "Joint1": "node1", "Joint2": "node2", 
+        df = pd.DataFrame(areas).rename(columns={"Area": "element", "Joint1": "node1", "Joint2": "node2", 
                                         "Joint3": "node3", "Joint4": "node4"})
-        df['tag'] = df['tag'].astype(str)
+        df['element'] = df['element'].astype(str)
 
         df3 = df[df['NumJoints'] == 3].copy()
         if not df3.empty:
             #df3['type'] = "area3"
             df3.loc[:, "type"] = "area3"
-            df3['tag'] = "area-" + df3['tag']
+            df3['element'] = "area-" + df3['element']
             self.ofem.elements = pd.concat([self.ofem.elements, 
-                        df3[['tag', 'type', 'node1', 'node2', 'node3']]])
+                        df3[['element', 'type', 'node1', 'node2', 'node3']]])
         df3 = None
         df4 = df[df['NumJoints'] == 4].copy()
         if not df4.empty:
             df4.loc[:, "type"] = "area4"
-            df4['tag'] = "area-" + df4['tag']
+            df4['element'] = "area-" + df4['element']
             self.ofem.elements = pd.concat([self.ofem.elements, 
-                        df4[['tag', 'type', 'node1', 'node2', 'node3', 'node4']]])
+                        df4[['element', 'type', 'node1', 'node2', 'node3', 'node4']]])
         df4 = None
 
         df = pd.DataFrame(areaassign).rename(columns={"Area": "element", "Section": "section"})
