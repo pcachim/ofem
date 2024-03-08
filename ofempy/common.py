@@ -1,4 +1,4 @@
-
+# dimensions
 POINT = 0
 NODE = 0
 LINE = 1
@@ -8,6 +8,16 @@ SURFACE = 2
 SURF = 2
 SOLID = 3
 VOLUME = 3
+
+# supports
+FREE = -1
+HINGED = 0 # 1110
+FIXED = 1 # 1111
+HORIZONTAL = 1100
+VERTICAL = 1010
+ROTATION = 1001
+HOR_ROT = 1101
+VER_ROT = 1011
 
 ofem_meshio = {
     "point": "vertex",

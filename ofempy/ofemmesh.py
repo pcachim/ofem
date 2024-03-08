@@ -188,7 +188,7 @@ class OfemMesh:
     @property
     def num_points(self):
         return self._num_points
-    
+
     @property
     def points(self):
         return self._points
@@ -214,7 +214,7 @@ class OfemStruct:
     _sections = pd.DataFrame(columns= ["section", "type", "material"])
     _supports = pd.DataFrame(columns= ["point", "ux", "uy", "uz", "rx", "ry", "rz"])
     # material types are: GENERAL, CONCRETE, STEEL, TIMBER, SPRIN, SOIL
-    _materials = pd.DataFrame(columns= ["material", "type", "props"])
+    _materials = pd.DataFrame(columns= ["material", "type"])
     _elemsections = pd.DataFrame(columns= ["element", "section"])
 
     def __post_init__(self):
@@ -435,7 +435,17 @@ class OfemStruct:
     def node_supports(self, nodesupports):
         self._nodesupports = nodesupports
     
-
+    @property
+    def num_materials(self):
+        return self._materials.shape[0]
+    
+    @property
+    def num_sections(self):
+        return self._sections.shape[0]
+    
+    @property
+    def num_supports(self):
+        return self._supports.shape[0]
 
 if __name__ == "__main__":
     msh = OfemMesh("Demo mesh")

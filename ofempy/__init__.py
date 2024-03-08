@@ -18,6 +18,7 @@ from . import pyfem
 from .sap2000 import Sap2000Handler
 from .femix import femix_handler
 from .ofemhandler import ofem_handler
+from .ofemlibhandler import Handler
 from .ofemgmsh import msh_handler
 from .gmshapp import gmshApp
 from .ofemlib import ofemSolver, ofemResults, OfemlibFile

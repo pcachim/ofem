@@ -952,8 +952,9 @@ class Sap2000Handler:
             "E1": "young", "U12": "poisson", "G12": "shear", 
             "UnitMass": "mass", "UnitWeight": "weight", "A1": "alpha"})
         df.loc[:, 'damping'] = 0.02
+        df.loc[:, 'type'] = "isotropic"
         self.ofem.materials = pd.concat([self.ofem.materials, 
-            df[['material', 'young', 'poisson', 'mass', 'shear', 'damping', 'alpha', 'weight']]])
+            df[['material', 'type', 'young', 'poisson', 'mass', 'shear', 'damping', 'alpha', 'weight']]])
         
         # SUPPORTS
         df = pd.DataFrame(supports).rename(columns={"Joint": "point", 
