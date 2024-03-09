@@ -460,8 +460,14 @@ class OfemStruct:
             self.mesh._elements.to_excel(writer, sheet_name='elements', index=False)
             self._sections.to_excel(writer, sheet_name='sections', index=False)
             self._elemsections.to_excel(writer, sheet_name='elementsections', index=False)
-            # self._supports.to_excel(writer, sheet_name='supports', index=False)
+            self._supports.to_excel(writer, sheet_name='supports', index=False)
             self._materials.to_excel(writer, sheet_name='materials', index=False)
+            self._pointloads.to_excel(writer, sheet_name='pointloads', index=False)
+            self._lineloads.to_excel(writer, sheet_name='lineloads', index=False)
+            self._arealoads.to_excel(writer, sheet_name='arealoads', index=False)
+            self._solidloads.to_excel(writer, sheet_name='solidloads', index=False)
+            self._loadcases.to_excel(writer, sheet_name='loadcases', index=False)
+            self._loadcombinations.to_excel(writer, sheet_name='loadcombinations', index=False)            
         return
 
     def write_xfem(self, filename: str):
@@ -480,7 +486,7 @@ class OfemStruct:
         json_buffer.seek(0)
         # Create a ZIP file in-memory and add the JSON buffer
         with zipfile.ZipFile(filename, 'w') as zip_file:
-                zip_file.writestr(path.stem+'.json', json_buffer.read().decode('utf-8'))        
+            zip_file.writestr(path.stem+'.json', json_buffer.read().decode('utf-8'))        
         return
     
     def save(self, filename: str, file_format: str = None):
@@ -669,6 +675,10 @@ class OfemStruct:
     @property
     def num_supports(self):
         return self._supports.shape[0]
+    
+    @property
+    def num_load_cases(self):
+        return self._loadcases.shape[0]
 
 if __name__ == "__main__":
     msh = OfemMesh("Demo mesh")

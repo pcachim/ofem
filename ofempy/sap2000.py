@@ -967,13 +967,13 @@ class Sap2000Handler:
         supports = self.s2k['Joint Restraint Assignments'.upper()]
         df = supports.rename(columns={"Joint": "point",
              "U1": "ux", "U2": "uy", "U3": "uz", "R1": "rx", "R2": "ry", "R3": "rz"})
-        df.loc[:,'point'] = df.loc[:,'point'].astype("string[pyarrow]")
+        df.loc[:,'point'] = df.loc[:,'point'].astype("string")
         df.loc[:,['ux', 'uy', 'uz', 'rx', 'ry', 'rz']] = df.loc[:,['ux', 'uy', 
             'uz', 'rx', 'ry', 'rz']].apply(lambda x: x.replace('Yes', '1').replace('No', '0'))
         df.loc[:,['ux', 'uy', 'uz', 'rx', 'ry', 'rz']] = df.loc[:,['ux', 'uy', 
             'uz', 'rx', 'ry', 'rz']].astype(int)
         lp = df.loc[:,'point'].values
-        df.loc[:,'point'] = df.loc[:,'point'].astype(pd.StringDtype)
+        df.loc[:,'point'] = df.loc[:,'point'].astype(pd.StringDtype.name)
         self.ofem.supports = pd.concat([self.ofem.supports, df[[
             "point", "ux", "uy", "uz", "rx", "ry", "rz"]]])
 

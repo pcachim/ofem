@@ -10,7 +10,8 @@ from . import ofemgmsh
 
 class Handler:
 
-    def to_ofempy(self, struct: ofemmesh.OfemStruct, mesh_file: str):
+    @staticmethod
+    def to_ofempy(struct: ofemmesh.OfemStruct, mesh_file: str):
         """Writes a femix .gldat mesh file
 
         Args:
@@ -23,16 +24,17 @@ class Handler:
         jobname = str(path.parent / (path.stem + ".ofem"))
         ofem_file = ofemlib.OfemlibFile(jobname, overwrite=True)
 
-        nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(2, includeBoundary=True)
-        coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))
-        nodelist = dict(zip(nodeTags, np.arange(1, len(nodeTags)+1)))
-        listnode = {v: k for k, v in nodelist.items()}
-        # coords = np.array(nodeCoords).reshape(-1, 3)
-        # sorted_dict_by_keys = {key: coordlist[key] for key in sorted(coordlist)}
-        eleTypes, eleTags, eleNodes = gmsh.model.mesh.getElements(2)
+        # nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(2, includeBoundary=True)
+        # coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))
+        # nodelist = dict(zip(nodeTags, np.arange(1, len(nodeTags)+1)))
+        # listnode = {v: k for k, v in nodelist.items()}
+        # # coords = np.array(nodeCoords).reshape(-1, 3)
+        # # sorted_dict_by_keys = {key: coordlist[key] for key in sorted(coordlist)}
+        # eleTypes, eleTags, eleNodes = gmsh.model.mesh.getElements(2)
         # elemlist = dict(zip(np.arange(1, 1+len(eleTags[0])), eleTags[0]))
-        self.nelems = struct.mesh.num_elements
-        self.npoints = struct.mesh.num_points
+        nelems = struct.mesh.num_elements
+        npoints = struct.mesh.num_points
+        ncases = struct.num_load_cases
         # materials
         nmats = struct.num_materials
         mat_types = dict(struct.materials['type'].value_counts())
@@ -57,7 +59,7 @@ class Handler:
             iel += 1
             element_secs[ielem] = [iel, section_map[(sec, nnode)], nnode, mat_map[mat]]
         # supports
-        self.nspecnodes = struct.num_supports
+        nspecnodes = struct.num_supports
         # element types
         ntypes = dict(struct.elements['type'].value_counts())
         nselp = len(ntypes)
@@ -75,10 +77,10 @@ class Handler:
 
             file.write("\n")
             file.write("### Main parameters\n")
-            file.write("%5d # nelem (n. of elements in the mesh)\n" % self.nelems)
-            file.write("%5d # npoin (n. of points in the mesh)\n" % self.npoints)
-            file.write("%5d # nvfix (n. of points with fixed degrees of freedom)\n" % self.nspecnodes)
-            file.write("%5d # ncase (n. of load cases)\n" % 1)
+            file.write("%5d # nelem (n. of elements in the mesh)\n" % nelems)
+            file.write("%5d # npoin (n. of points in the mesh)\n" % npoints)
+            file.write("%5d # nvfix (n. of points with fixed degrees of freedom)\n" % nspecnodes)
+            file.write("%5d # ncase (n. of load cases)\n" % ncases)
             file.write("%5d # nselp (n. of sets of element parameters)\n" % nselp)
             file.write("%5d # nmats (n. of sets of material properties)\n" % nmats)
             file.write("%5d # nspen (n. of sets of element nodal properties)\n" % nsections)
@@ -158,10 +160,12 @@ class Handler:
                 elemen = struct.elements.loc[element]
                 etype = elemen.type
                 file.write(" %6d %5d %5d %5d    " % (ielem, ielps, matno, ielnp))
-                nodelist = struct.mesh.get_list_node_columns(etype)
-                nodelist = elemen[ struct.mesh.get_list_node_columns(etype) ]
+                nodecolumnlist = struct.mesh.get_list_node_columns(etype)
+                nodelist = elemen[ nodecolumnlist ]
                 for inode in range(nnode):
-                    lnode = struct.mesh.points.at[nodelist.loc[inode]].id
+                    icol = nodecolumnlist[inode]
+                    inode = nodelist[icol]
+                    lnode = struct.mesh.points.at[inode, 'id']
                     # file.write(" %8d" % eleNodes[0][count])
                     file.write(" %8d" % lnode)
                 file.write("\n")
@@ -194,46 +198,54 @@ class Handler:
                 else:
                     file.write("%6d %6d %6d %6d %6d %6d\n" % (fix.ux, fix.uy, fix.uz, fix.rx, fix.ry, fix.rz))
                 count += 1
+                
+            # LOADCASES - preparing the load cases
+            
+            
+            
+            # LOADCASES - writing the load cases
+            for i in range(ncases):
+                file.write("\n")
+                file.write("# ===================================================================\n")
 
-            file.write("\n")
-            file.write("# ===================================================================\n")
+                file.write("\n")
+                file.write("### Load case n. %8d\n" % 1)
 
-            file.write("\n")
-            file.write("### Load case n. %8d\n" % 1)
+                file.write("\n")
+                file.write("### Title of the load case\n")
+                file.write("Uniform distributed load\n")
 
-            file.write("\n")
-            file.write("### Title of the load case\n")
-            file.write("Uniform distributed load\n")
+                file.write("\n")
+                file.write("### Load parameters\n")
+                file.write("%5d # nplod (n. of point loads in nodal points)\n" % 0)
+                file.write("%5d # ngrav (gravity load flag: 1-yes0-no)\n" % 0)
+                file.write("%5d # nedge (n. of edge loads) (F.E.M. only)\n" % 0)
+                file.write("%5d # nface (n. of face loads) (F.E.M. only)\n" % nelems)
+                file.write("%5d # ntemp (n. of points with temperature variation) (F.E.M. only)\n" % 0)
+                file.write("%5d # nudis (n. of uniformly distributed loads " % 0)
+                file.write("(3d frames and trusses only)\n")
+                file.write("%5d # nepoi (n. of element point loads) (3d frames and trusses only)\n" % 0)
+                file.write("%5d # nprva (n. of prescribed and non zero degrees of freedom)\n" % 0)
 
-            file.write("\n")
-            file.write("### Load parameters\n")
-            file.write("%5d # nplod (n. of point loads in nodal points)\n" % 0)
-            file.write("%5d # ngrav (gravity load flag: 1-yes0-no)\n" % 0)
-            file.write("%5d # nedge (n. of edge loads) (F.E.M. only)\n" % 0)
-            file.write("%5d # nface (n. of face loads) (F.E.M. only)\n" % self.nelems)
-            file.write("%5d # ntemp (n. of points with temperature variation) (F.E.M. only)\n" % 0)
-            file.write("%5d # nudis (n. of uniformly distributed loads " % 0)
-            file.write("(3d frames and trusses only)\n")
-            file.write("%5d # nepoi (n. of element point loads) (3d frames and trusses only)\n" % 0)
-            file.write("%5d # nprva (n. of prescribed and non zero degrees of freedom)\n" % 0)
-
-            file.write("\n")
-            file.write("### Face load (loaded element, loaded points and load value)\n")
-            file.write("### (local coordinate system)\n")
-            count = 0
-            for i, elem in enumerate(eleTags[0]):
-                file.write("# iface  loelf\n")
-                file.write(" %5d %5d\n" % (i+1, i+1))
-                file.write("# lopof       prfac-n   prfac-mb   prfac-mt\n")
-                for j in range(nnode):
-                    # inode = eleNodes[0][count]
-                    inode = nodelist[eleNodes[0][count]]
-                    file.write(" %5d %16.3f %16.3f %16.3f\n" % (inode, self.load, 0.0, 0.0))
-                    count += 1
+                file.write("\n")
+                file.write("### Face load (loaded element, loaded points and load value)\n")
+                file.write("### (local coordinate system)\n")
+                count = 0
+                for i, elem in enumerate(eleTags[0]):
+                    file.write("# iface  loelf\n")
+                    file.write(" %5d %5d\n" % (i+1, i+1))
+                    file.write("# lopof       prfac-n   prfac-mb   prfac-mt\n")
+                    for j in range(nnode):
+                        # inode = eleNodes[0][count]
+                        inode = nodelist[eleNodes[0][count]]
+                        file.write(" %5d %16.3f %16.3f %16.3f\n" % (inode, load, 0.0, 0.0))
+                        count += 1
 
             file.write("\n")
             file.write("END_OF_FILE\n")
 
+        # LOAD COMBINATIONS
+        
         if path.suffix.lower() == ".gldat":
             combo_file = str(path.parent / path.stem) + ".cmdat"
         
@@ -275,48 +287,5 @@ class Handler:
 
         ofem_file.add(mesh_file)
         ofem_file.add(combo_file)
-        txt = ofemlib.ofemSolver(jobname)
-
-        options = {'csryn': 'n', 'ksres': 2, 'lcaco': 'c'}
-        # codes = [ofemlib.DI_CSV, ofemlib.AST_CSV, ofemlib.EST_CSV, ofemlib.RS_CSV]
-        codes = [ofemlib.DI_CSV, ofemlib.AST_CSV, ofemlib.EST_CSV]
-        txt = ofemlib.ofemResults(jobname, codes, **options)
-
-        df = ofemlib.get_csv_from_ofem(jobname, ofemlib.DI_CSV)
-        for i in range(1, 4):
-            t1 = gmsh.view.add("disp-" + str(i))
-            dff = df.loc[df['icomb'] == 1]
-            dff['new_label'] = dff['point'].apply(lambda x: listnode[x])
-            # gmsh.view.addHomogeneousModelData(
-            #         t1, 0, "slab", "NodeData", dff["point"].values, dff['disp-'+str(i)].values) 
-            gmsh.view.addHomogeneousModelData(
-                    t1, 0, "slab", "NodeData", dff["new_label"].values, dff['disp-'+str(i)].values) 
-            gmsh.view.option.setNumber(t1, "Visible", 0)
-
-        t1 = gmsh.view.add("deformed mesh")
-        dff = df.loc[df['icomb'] == 1]
-        dff['new_label'] = dff['point'].apply(lambda x: listnode[x])
-        npoin = dff.shape[0]
-        displ = np.stack([np.zeros(npoin), np.zeros(npoin), dff['disp-1'].values], axis=1).reshape(3*npoin)
-        gmsh.view.addHomogeneousModelData(
-                t1, 0, "slab", "NodeData", dff["new_label"].values, displ, numComponents=3) 
-
-        df = ofemlib.get_csv_from_ofem(jobname, ofemlib.AST_CSV)
-        for i in range(1, 6):
-            t1 = gmsh.view.add("str_avg-" + str(i))
-            dff = df.loc[df['icomb'] == 1]
-            dff['new_label'] = dff['point'].apply(lambda x: listnode[x])
-            gmsh.view.addHomogeneousModelData(
-                    t1, 0, "slab", "NodeData", dff['new_label'].values, dff['str-'+str(i)].values) 
-            gmsh.view.option.setNumber(t1, "Visible", 0)
-
-        df = ofemlib.get_csv_from_ofem(jobname, ofemlib.EST_CSV)
-        unique_values = [elemlist.get(item, item) for item in df["element"].unique().tolist()]
-        for i in range(1, 6):
-            t1 = gmsh.view.add("str_eln-" + str(i))
-            dff = df.loc[df['icomb'] == 1]
-            gmsh.view.addHomogeneousModelData(
-                    t1, 0, "slab", "ElementNodeData", unique_values, dff['str-'+str(i)].values) 
-            gmsh.view.option.setNumber(t1, "Visible", 0)
 
         return
