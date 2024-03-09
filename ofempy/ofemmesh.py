@@ -7,11 +7,14 @@ import pandas as pd
 import meshio, gmsh
 import sys, io, json, zipfile, re
 
+pd.options.mode.copy_on_write = True
 elemtypes = list(common.ofem_meshio.keys())
 
 @dataclass
 class OfemMesh:
     title: str
+    _dirtypoints: bool = False
+    _dirtyelements: bool = False
     _points = pd.DataFrame(columns= ["point", "x", "y", "z"])
     _elements = pd.DataFrame(columns= ["element", "type", "node1", "node2"])
     # "convversion from tags to id"
@@ -20,7 +23,7 @@ class OfemMesh:
     # generall medh parameters
     _num_points: int = 0
     _num_elements: int = 0
-
+    
     def _set_tags_to_id(self, base: int = 1):
         self._num_points = self._points.shape[0]
         self._nodetag_to_id = dict(zip(self._points["point"].values, np.arange(base, self._num_points+base)))
@@ -28,16 +31,26 @@ class OfemMesh:
         self._elemtag_to_id = dict(zip(self._elements["element"].values, np.arange(base, self._num_elements+base)))
         return
 
-    def _set_points_elems_id(self, base: int = 1):
+    def set_points_elems_id(self, base: int = 1):
         self._set_tags_to_id(base)     
         self._points["id"] = self._points["point"].apply(lambda x: self._nodetag_to_id[x])
         self._elements["id"] = self._elements["element"].apply(lambda x: self._elemtag_to_id[x])
         return 
 
-    def _get_list_node_columns(self, elemtype: str):
+    def get_list_node_columns(self, elemtype: str):
         nnodes = int(re.search(r"\d+$", elemtype).group())
         nnodes = common.ofem_nnodes[elemtype]
         return [f"node{i}" for i in range(1, nnodes+1)]
+
+    def set_indexes(self):
+        if self._dirtyelements:
+            self._elements['ielement'] = self._elements['element'].copy()
+            self._elements.set_index('ielement', inplace=True)
+            self._dirtyelements = False
+        if self._dirtypoints:
+            ipoint = self._points['point'].copy()
+            self._points.set_index(ipoint, inplace=True)
+            self._dirtypoints = False
 
     def save(self, filename: str, file_format: str = "ofem"):
         if file_format == "ofem":
@@ -66,6 +79,8 @@ class OfemMesh:
         self._num_elements = self._elements.shape[0]
         self.elemlist = {k: self._elements[self._elements["type"] == k]["element"].values for k in elemtypes}  
 
+        self._dirtypoints = True
+        self._dirtyelements = True
         return
     
     def read_ofem():
@@ -100,7 +115,7 @@ class OfemMesh:
         path = Path(filename)
         if path.suffix != ".msh":
             filename = path.with_suffix(".msh")
-        self._set_points_elems_id(base=1)
+        self.set_points_elems_id(base=1)
 
         gmsh.initialize(sys.argv)
         gmsh.model.add(self.title)
@@ -125,7 +140,7 @@ class OfemMesh:
             # create a list with the numbers of elements
             elems_list = np.array(gmsh_elems["id"]).astype(int).tolist()
 
-            nlist = self._get_list_node_columns(elemtype)
+            nlist = self.get_list_node_columns(elemtype)
             # create a list with the numbers of nodes of selected elements
             elems_nodes = gmsh_elems[nlist].astype(int).values.ravel().tolist()
             gmsh.model.mesh.addElementsByType(entity, gmsh_type, elems_list, elems_nodes)
@@ -140,6 +155,7 @@ class OfemMesh:
             raise ValueError(f"Node with tag {tag} already exists")
         node = pd.DataFrame({"point": [tag], "x": [x], "y": [y], "z": [z]})
         self._points = pd.concat([self._points, node], ignore_index=True)
+        self._dirtypoints = True
         return
     
     def add_nodes(self, tags: list, points: list):
@@ -148,6 +164,7 @@ class OfemMesh:
             raise ValueError(f"Number of tags and number of coordinates must be the same")
         for tag, coord in zip(tags, points):
             self.add_node(tag, *coord)
+        self._dirtypoints = True
         return
 
     def add_element(self, tag: Union[int, str], elemtype: str, nodes: list):
@@ -166,8 +183,9 @@ class OfemMesh:
                 raise ValueError(f"Node with tag {node} does not exist")
 
         element = pd.DataFrame({"element": [tag], "type": [elemtype]})
-        element = pd.concat([element, pd.DataFrame([nodes], columns=self._get_list_node_columns(elemtype))], axis=1)
+        element = pd.concat([element, pd.DataFrame([nodes], columns=self.get_list_node_columns(elemtype))], axis=1)
         self._elements = pd.concat([self._elements, element], ignore_index=True)
+        self._dirtyelements = True
         return
 
     def add_elements_by_type(self, elemtype: str, tags: list, nodes: list):
@@ -179,8 +197,12 @@ class OfemMesh:
             raise ValueError(f"Number of tags and number of nodes must be the same")
         for tag, node in zip(tags, nodes):
             self.add_element(tag, elemtype, node)
+        self._dirtyelements = True
         return
 
+    @property
+    def dirty(self):
+        return self._dirtypoints and self._dirtyelements
     @property
     def num_elements(self):
         return self._num_elements
@@ -191,35 +213,203 @@ class OfemMesh:
 
     @property
     def points(self):
+        if self._dirtypoints:
+            self.set_indexes()
         return self._points
     
     @points.setter
     def points(self, points):
         self._points = points
+        self._dirtypoints = True
+        return
     
     @property
     def elements(self):
+        if self._dirtyelements: 
+            self.set_indexes()
         return self._elements
 
     @elements.setter
     def elements(self, elements):    
         self._elements = elements
+        self._dirtyelements = True
+        return
 
+    def get_normals(self, convention: str = "") -> dict:
+        """
+            convention (str, optional): Defaults to "ofempy". 
+            can be "ofempy", "sap2000" or "femix".
+        """
+        convention = convention.lower()
+        if convention == "femix":
+            return self.get_normals_femix()
+        # elif convention == "sap2000" or convention == "ofempy":
+        else:
+            return self.get_normals_sap2000()
+
+    def get_normals_sap2000(self):
+        if self._dirty:
+            self.set_indexes()
+        normals = {}
+        for elem in self._elements.itertuples():
+            if str(elem.type).startswith("line"):
+                node1 = self._points.loc[elem.node1]
+                node2 = self._points.loc[elem.node2]
+                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+                v1 = v1/np.linalg.norm(v1)
+                v3 = np.cross(v1, [0, 0, 1])
+                n3 = np.linalg.norm(v3)
+                v3 = [0, np.sign(v1[2]), 0] if abs(n3) < 1.0e-10 else v3/n3
+                v2 = np.cross(v3, v1)
+            elif str(elem.type).startswith("area"):
+                node1 = self._points.loc[elem.node1]
+                node2 = self._points.loc[elem.node2]
+                node3 = self._points.loc[elem.node3] if elem.type == 'area3' else self._points.loc[elem.node4] 
+                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+                v2 = np.array([node3.x - node1.x, node3.y - node1.y, node3.z - node1.z])
+                v3 = np.cross(v1, v2)
+                v3 = v3/np.linalg.norm(v3)
+
+                v1 = np.cross([0, 0, 1], v3)
+                n1 = np.linalg.norm(v1)
+                v1 = [1, 0, 0] if abs(n1) < 1.0e-10 else v1
+                v1 = v1/np.linalg.norm(v1)
+                v2 = np.cross(v3, v1)
+            elif str(elem.type).startswith("solid"):
+                v1 = np.array([1, 0, 0])
+                v2 = np.array([0, 1, 0])
+                v3 = np.array([0, 0, 1])
+            elif str(elem.type).startswith("point"):
+                v1 = np.array([1, 0, 0])
+                v2 = np.array([0, 1, 0])
+                v3 = np.array([0, 0, 1])
+            else:
+                raise ValueError('element type not recognized')
+            
+            normals[elem.element] = [v1, v2, v3]
+        return normals
+
+    def get_normals_femix(self):
+        self.set_indexes()
+        normals = {}
+        for elem in self._elements.itertuples():
+            if str(elem.type).startswith("line"):
+                node1 = self._points.loc[elem.node1]
+                node2 = self._points.loc[elem.node2]
+                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+                v1 = v1/np.linalg.norm(v1)
+                v3 = np.cross(v1, [0, 1, 0])
+                n3 = np.linalg.norm(v3)
+                v3 = [-np.sign(v1[2]), 0, 0] if abs(n3) < 1.0e-10 else v3/n3
+                v2 = np.cross(v3, v1)
+            elif str(elem.type).startswith("area"):
+                node1 = self._points.loc[elem.node1]
+                node2 = self._points.loc[elem.node2]
+                node3 = self._points.loc[elem.node3] if elem.type == 'area3' else self._points.loc[elem.node4] 
+                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+                v2 = np.array([node3.x - node1.x, node3.y - node1.y, node3.z - node1.z])
+                v3 = np.cross(v1, v2)
+                v3 = v3/np.linalg.norm(v3)
+
+                v1 = np.cross([0, 1, 0], v3)
+                n1 = np.linalg.norm(v1)
+                v1 = np.cross(v3, [1, 0, 0]) if abs(n1) < 1.0e-10 else v1
+                v1 = v1/np.linalg.norm(v1)
+                v2 = np.cross(v3, v1)
+            elif str(elem.type).startswith("solid"):
+                v1 = np.array([1, 0, 0])
+                v2 = np.array([0, 1, 0])
+                v3 = np.array([0, 0, 1])
+            elif str(elem.type).startswith("point"):
+                v1 = np.array([1, 0, 0])
+                v2 = np.array([0, 1, 0])
+                v3 = np.array([0, 0, 1])
+            else:
+                raise ValueError('element type not recognized')
+            
+            normals[elem.element] = [v1, v2, v3]
+        return normals
+
+NTABLES = 10
+
+SECTIONS = 0
+SUPPORTS = 1
+MATERIALS = 2
+ELEMSECTIONS = 3
+POINTLOADS = 4
+LINELOADS = 5
+AREALOADS = 6
+SOLIDLOADS = 7
+LOADCASES = 8
+LOADCOMBINATIONS = 9
 
 @dataclass
 class OfemStruct:
     title: str
+    _dirty = [False for i in range(NTABLES)]
+    # GEOMETRY
     _mesh: OfemMesh = field(init=False)
-    # section types are: FRAME, SHELL, SPRING,
+    # MATERIALS
     _sections = pd.DataFrame(columns= ["section", "type", "material"])
     _supports = pd.DataFrame(columns= ["point", "ux", "uy", "uz", "rx", "ry", "rz"])
-    # material types are: GENERAL, CONCRETE, STEEL, TIMBER, SPRIN, SOIL
     _materials = pd.DataFrame(columns= ["material", "type"])
     _elemsections = pd.DataFrame(columns= ["element", "section"])
+    # LOADS
+    _loadcases = pd.DataFrame(columns= ["loadcase", "type", "title"])
+    _loadcombinations = pd.DataFrame(columns= ["combination", "type", "title"])
+    _pointloads = pd.DataFrame(columns= ["point", "loadcase", "fx", "fy", "fz", "mx", "my", "mz"])
+    _lineloads = pd.DataFrame(columns= ["element", "loadcase", "fx", "fy", "fz"])
+    _arealoads = pd.DataFrame(columns= ["element", "loadcase", "fx", "fy", "fz", "mx", "my", "mz"])
+    _solidloads = pd.DataFrame(columns= ["element", "loadcase", "fx", "fy", "fz", "mx", "my", "mz"])
 
     def __post_init__(self):
         # Initialize field2 with the value of field1
         self._mesh: OfemMesh = OfemMesh(self.title)
+
+    def set_indexes(self):
+        if self._dirty[SECTIONS]:
+            self._sections['isection'] = self._sections['section'].copy()
+            self._sections.set_index('isection', inplace=True)
+            self._dirty[SECTIONS] = False
+        if self._dirty[SUPPORTS]:
+            self._supports['isupport'] = self._supports['point'].copy()
+            self._supports.set_index('isupport', inplace=True)
+            self._dirty[SUPPORTS] = False
+        if self._dirty[MATERIALS]:
+            self._materials['imaterial'] = self._materials['material'].copy()
+            self._materials.set_index('imaterial', inplace=True)
+            self._dirty[MATERIALS] = False
+        if self._dirty[ELEMSECTIONS]:
+            self._elemsections['ielement'] = self._elemsections['element'].copy()
+            self._elemsections.set_index('ielement', inplace=True)
+            self._dirty[ELEMSECTIONS] = False
+        if self._dirty[POINTLOADS]:
+            self._pointloads['ipoint'] = self._pointloads['point'].copy()
+            self._pointloads.set_index('ipoint', inplace=True)
+            self._dirty[POINTLOADS] = False
+        if self._dirty[LINELOADS]:
+            self._lineloads['ielement'] = self._lineloads['element'].copy()
+            self._lineloads.set_index('ielement', inplace=True)
+            self._dirty[LINELOADS] = False
+        if self._dirty[AREALOADS]:
+            self._arealoads['ielement'] = self._arealoads['element'].copy()
+            self._arealoads.set_index('ielement', inplace=True)
+            self._dirty[AREALOADS] = False
+        if self._dirty[SOLIDLOADS]:
+            self._solidloads['ielement'] = self._solidloads['element'].copy()
+            self._solidloads.set_index('ielement', inplace=True)
+            self._dirty[SOLIDLOADS] = False
+        if self._dirty[LOADCASES]:
+            self._loadcases['iloadcase'] = self._loadcases['loadcase'].copy()
+            self._loadcases.set_index('iloadcase', inplace=True)
+            self._dirty[LOADCASES] = False
+        if self._dirty[LOADCOMBINATIONS]:
+            self._loadcombinations['icombination'] = self._loadcombinations['combination'].copy()
+            self._loadcombinations.set_index('icombination', inplace=True)
+            self._dirty[LOADCOMBINATIONS] = False
+
+        self.mesh.set_indexes()
+        return
 
     def read_excel(self, filename: str):
         path = Path(filename)
@@ -256,6 +446,7 @@ class OfemStruct:
         if "materials" in dfs:
             self._materials = dfs["materials"]
 
+        self._dirty = [True for i in range(NTABLES)]
         return
 
     def write_excel(self, filename: str):
@@ -318,9 +509,11 @@ class OfemStruct:
             with zip_file.open(path.stem+'.json') as json_file:
                 data = json.load(json_file)
                 self.from_dict(data)
+
+        self._dirty = [True for i in range(NTABLES)]
         return
 
-    def load(self, filename: str, file_format: str = None):
+    def read(self, filename: str, file_format: str = None):
         if file_format == None:
             file_format = Path(filename).suffix
 
@@ -339,7 +532,13 @@ class OfemStruct:
             "sections": self._sections.to_dict(orient="records"),
             "elementsections": self._elemsections.to_dict(orient="records"),
             "supports": self._supports.to_dict(orient="records"),
-            "materials": self._materials.to_dict(orient="records")
+            "materials": self._materials.to_dict(orient="records"),
+            "pointloads": self._pointloads.to_dict(orient="records"),
+            "lineloads": self._lineloads.to_dict(orient="records"),
+            "arealoads": self._arealoads.to_dict(orient="records"),
+            "solidloads": self._solidloads.to_dict(orient="records"),
+            "loadcases": self._loadcases.to_dict(orient="records"),
+            "loadcombinations": self._loadcombinations.to_dict(orient="records")
         }
 
     def from_dict(self, ofem_dict: dict):
@@ -361,6 +560,26 @@ class OfemStruct:
         json_buffer = io.BytesIO(json.dumps(ofem_dict["materials"]).encode())
         json_buffer.seek(0)
         self._materials = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["pointloads"]).encode())
+        json_buffer.seek(0)
+        self._pointloads = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["lineloads"]).encode())
+        json_buffer.seek(0)
+        self._lineloads = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["arealoads"]).encode())
+        json_buffer.seek(0)
+        self._arealoads = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["solidloads"]).encode())
+        json_buffer.seek(0)
+        self._solidloads = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["loadcases"]).encode())
+        json_buffer.seek(0)
+        self._loadcases = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["loadcombinations"]).encode())
+        json_buffer.seek(0)
+        self._loadcombinations = pd.read_json(json_buffer, orient='records')
+
+        self._dirty = [True for i in range(NTABLES)]
         return
 
     @property
@@ -369,7 +588,13 @@ class OfemStruct:
     
     @mesh.setter
     def mesh(self, mesh):
-        self._mesh = mesh
+        if False:
+            self._mesh = mesh
+            self._mesh._dirtyelements = True
+            self._mesh._dirtypoints = True
+        else: 
+            self.mesh = mesh
+        return
     
     # @property
     # def title(self):
@@ -386,6 +611,7 @@ class OfemStruct:
     @points.setter
     def points(self, points):
         self._mesh.points = points
+        self._mesh._dirtypoints = True
     
     @property
     def elements(self):
@@ -394,7 +620,8 @@ class OfemStruct:
     @elements.setter
     def elements(self, elements):
         self._mesh.elements = elements
-    
+        self._mesh._dirtyelements = True
+
     @property
     def sections(self):
         return self._sections
@@ -402,6 +629,7 @@ class OfemStruct:
     @sections.setter
     def sections(self, sections):
         self._sections = sections
+        self._dirty[SECTIONS] = True
         
     @property
     def supports(self):
@@ -410,6 +638,7 @@ class OfemStruct:
     @supports.setter
     def supports(self, supports):
         self._supports = supports
+        self._dirty[SUPPORTS] = True
     
     @property
     def materials(self):
@@ -418,6 +647,7 @@ class OfemStruct:
     @materials.setter
     def materials(self, materials):
         self._materials = materials
+        self._dirty[MATERIALS] = True
     
     @property
     def element_sections(self):
@@ -426,15 +656,8 @@ class OfemStruct:
     @element_sections.setter
     def element_sections(self, elemsections):
         self._elemsections = elemsections
-    
-    @property
-    def node_supports(self):
-        return self._nodesupports
-    
-    @node_supports.setter
-    def node_supports(self, nodesupports):
-        self._nodesupports = nodesupports
-    
+        self._dirty[ELEMSECTIONS] = True
+
     @property
     def num_materials(self):
         return self._materials.shape[0]

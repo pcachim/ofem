@@ -10,7 +10,7 @@ from . import ofemgmsh
 
 class Handler:
 
-    def to_ofem(self, struct: ofemmesh.OfemStruct, mesh_file: str):
+    def to_ofempy(self, struct: ofemmesh.OfemStruct, mesh_file: str):
         """Writes a femix .gldat mesh file
 
         Args:
@@ -63,6 +63,10 @@ class Handler:
         nselp = len(ntypes)
         ndime = 3
         ele_types = [ofem_femix[n] for n in ntypes.keys()]
+
+        # prepare the database for elments and noodes base 1
+        struct.mesh.set_points_elems_id(1)
+        struct.set_indexes()
 
         with open(mesh_file, 'w') as file:
 
@@ -123,61 +127,72 @@ class Handler:
             for key, ispen in section_map.items():
                 secname = key[0]
                 nnode = key[1]
-                section = struct.sections.loc[struct.sections['section'] == secname]
-                sec_type = str(section['type'].values[0]).lower()
+                section = struct.sections.loc[secname]
+                sec_type = section.type.lower()
                 file.write("# ispen\n")
                 file.write(" %6d\n" % ispen)
                 if sec_type == "area":
                     file.write("# inode       thick\n")
                     for inode in range(1, nnode+1):
-                        file.write(" %6d     %15.3f\n" % (inode, section['thick'].values[0]))
+                        file.write(" %6d     %15.3f\n" % (inode, section['thick']))
                 elif sec_type == "line":
                     file.write(
                         "# inode       barea        binet        bin2l        bin3l        bangl(deg)\n")
                     for inode in range(1, nnode+1):
                         file.write(" %6d     %15.3f     %15.3f     %15.3f     %15.3f     %15.3f\n" % 
-                            (inode, section["area"].values[0], section["torsion"].values[0],
-                            section["inertia2"].values[0], section["inertia3"].values[0], section["angle"].values[0]))
+                            (inode, section["area"], section["torsion"],
+                            section["inertia2"], section["inertia3"], section["angle"]))
                 else:
                     raise ValueError("Section type not recognized")
-                        
+            
             file.write("\n")
             file.write("### Element parameter index, material properties index, element nodal\n")
             file.write("### properties index and list of the nodes of each element\n")
             file.write("# ielem ielps matno ielnp       lnods ...\n")
-            count = 0
-            for element, values in element_secs:
+            for element, values in element_secs.items():
                 ielem = values[0]
-                ielps = ntypes[struct.elements.loc[struct.elements['element'] == element, 'type'].values[0]]    
+                ielps = ntypes[struct.elements.loc[element].type]  
                 matno = values[3]
                 ielnp = values[1]
                 nnode = values[2]
+                elemen = struct.elements.loc[element]
+                etype = elemen.type
                 file.write(" %6d %5d %5d %5d    " % (ielem, ielps, matno, ielnp))
+                nodelist = struct.mesh.get_list_node_columns(etype)
+                nodelist = elemen[ struct.mesh.get_list_node_columns(etype) ]
                 for inode in range(nnode):
-        ### mudar a lista para numeral
+                    lnode = struct.mesh.points.at[nodelist.loc[inode]].id
                     # file.write(" %8d" % eleNodes[0][count])
-                    file.write(" %8d" % nodelist[eleNodes[0][count]])
-                    count += 1
+                    file.write(" %8d" % lnode)
                 file.write("\n")
 
             file.write("\n")
             file.write("### Coordinates of the points\n")
             file.write("# ipoin            coord-x            coord-y            coord-z\n")
             icount = 1
-            for i, ipoin in enumerate(nodeTags):
-                node_tag = listnode[i+1]
-                node = coordlist[node_tag]
-                count = int(3*node)
-                file.write(" %6d    %16.8lf   %16.8lf\n" % (i+1, nodeCoords[count], nodeCoords[count+1]))
+            for point in struct.mesh.points.itertuples():
+                if icount != point.id:
+                    raise ValueError("Point id not in sequence")
+
+                if ndime == 2:
+                    file.write(" %6d    %16.8lf   %16.8lf\n" % 
+                        (point.id, point.x, point.y))
+                else:
+                    file.write(" %6d    %16.8lf   %16.8lf   %16.8lf\n" % 
+                        (point.id, point.x, point.y, point.z))
                 icount += 1
 
             file.write("\n")
             file.write("### Points with fixed degrees of freedom and fixity codes (1-fixed0-free)\n")
             file.write("# ivfix  nofix       ifpre ...\n")
             count = 1
-            for i, fix in self.fixno.items():
-                sup = " 1  1  1" if fix==FIXED else " 1  0  0"
-                file.write(" %6d %6d      %s\n" % (count, nodelist[i], sup))
+            for fix in struct.supports.itertuples():
+                point = struct.mesh.points.loc[fix.point].id
+                file.write(" %6d %6d      \n" % (count, point))
+                if ndime == 2:
+                    file.write("%6d %6d\n" % (fix.ux, fix.uy, 0))
+                else:
+                    file.write("%6d %6d %6d %6d %6d %6d\n" % (fix.ux, fix.uy, fix.uz, fix.rx, fix.ry, fix.rz))
                 count += 1
 
             file.write("\n")

@@ -1,5 +1,13 @@
 {
     "files.associations": {
-        "WRIGLDAT.C": "cpp"
+        "WRIGLDAT.C": "cpp",
+        "WGLDAT.C": "cpp",
+        "CVECN3.C": "cpp",
+        "CLELTY.C": "cpp",
+        "CELCOD.C": "cpp",
+        "CUDILO.C": "cpp",
+        "CSHVEC.C": "cpp",
+        "UVECN3.C": "cpp",
+        "CTRMLG.C": "cpp"
     }
 }

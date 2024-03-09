@@ -14,6 +14,8 @@ import copy
 from .common import *
 from .ofemmesh import *
 
+pd.set_option("mode.copy_on_write", True)
+
 # Element type
 POINT = 15
 FRAME2 = 1
@@ -206,6 +208,8 @@ def read_excel(filename: str) -> dict:
     for sheet_name, sheet_data in excel_data.items():
         dataframes[titles[sheet_name]] = sheet_data
 
+    supports = dataframes['Joint Restraint Assignments'.upper()]
+    lp = supports['Joint'].values
     return dataframes
 
 
@@ -226,9 +230,6 @@ class Sap2000Handler:
         if not self._check_input("geometry"):
             raise ValueError("Input file is not a SAP2000 file")
 
-    @classmethod
-    def read_excel(cls, ):
-        return
 
     def _check_input(self, model: str) -> bool:
         try:
@@ -878,13 +879,12 @@ class Sap2000Handler:
         areasect = self.s2k['Area Section Properties'.upper()]
         areaassign = self.s2k['Area Section Assignments'.upper()]
         material = self.s2k['Material Properties 02 - Basic Mechanical Properties'.upper()]
-        supports = self.s2k['Joint Restraint Assignments'.upper()]
         # groups = self.s2k['Groups 1 - Definitions'.upper()]
         # groupsassign = self.s2k['Groups 2 - Assignments'.upper()]
 
         # JOINTS
         df = pd.DataFrame(joints).rename(columns={"Joint": "point", "XorR": "x", "Y": "y", "Z": "z"})
-        df.loc[:, ["point"]].astype(str)
+        df.loc[:, 'point'] = df.loc[:, 'point'].astype(str)
         self.ofem.points = pd.concat([self.ofem.points, df[['point', 'x', 'y', 'z']]])
 
         # ELEMENTS - FRAMES
@@ -892,6 +892,7 @@ class Sap2000Handler:
         df.loc[:, "type"] = "line2"
         # df.loc[:, 'tag'] = df.loc[:, 'tag'].astype(str)
         df['element'] = df['element'].astype(str)
+        df[['node1', 'node2']] = df[['node1', 'node2']].astype(str) 
         df.loc[:, 'element'] = "line-" + df['element'].astype(str)
         self.ofem.elements = pd.concat([self.ofem.elements, df[['element', 'type', 'node1', 'node2']]])
 
@@ -916,6 +917,7 @@ class Sap2000Handler:
         df = pd.DataFrame(areas).rename(columns={"Area": "element", "Joint1": "node1", "Joint2": "node2", 
                                         "Joint3": "node3", "Joint4": "node4"})
         df['element'] = df['element'].astype(str)
+        df[['node1', 'node2', 'node3', 'node4']] = df[['node1', 'node2', 'node3', 'node4']].astype(str) 
 
         df3 = df[df['NumJoints'] == 3].copy()
         if not df3.empty:
@@ -947,6 +949,11 @@ class Sap2000Handler:
         self.ofem.sections = pd.concat([self.ofem.sections, 
             df[["section", "type", "material", "design", "thick", "angle"]]])
 
+        # CALCULATE NORMALS
+        self.ofem.set_indexes()
+        normals = get_normals_sap2000(self.ofem.elements, self.ofem.points)
+        # res = np.matmul(normals['line-1'], np.array([0, 0, 1]))
+
         # MATERIALS
         df = pd.DataFrame(material).rename(columns={"Material": "material",                                         
             "E1": "young", "U12": "poisson", "G12": "shear", 
@@ -955,13 +962,45 @@ class Sap2000Handler:
         df.loc[:, 'type'] = "isotropic"
         self.ofem.materials = pd.concat([self.ofem.materials, 
             df[['material', 'type', 'young', 'poisson', 'mass', 'shear', 'damping', 'alpha', 'weight']]])
-        
+
         # SUPPORTS
-        df = pd.DataFrame(supports).rename(columns={"Joint": "point", 
-            "U1": "ux", "U2": "uy", "U3": "uz", "R1": "rx", "R2": "ry", "R3": "rz"})
-        df.loc[:,['point']].astype(str)
+        supports = self.s2k['Joint Restraint Assignments'.upper()]
+        df = supports.rename(columns={"Joint": "point",
+             "U1": "ux", "U2": "uy", "U3": "uz", "R1": "rx", "R2": "ry", "R3": "rz"})
+        df.loc[:,'point'] = df.loc[:,'point'].astype("string[pyarrow]")
+        df.loc[:,['ux', 'uy', 'uz', 'rx', 'ry', 'rz']] = df.loc[:,['ux', 'uy', 
+            'uz', 'rx', 'ry', 'rz']].apply(lambda x: x.replace('Yes', '1').replace('No', '0'))
+        df.loc[:,['ux', 'uy', 'uz', 'rx', 'ry', 'rz']] = df.loc[:,['ux', 'uy', 
+            'uz', 'rx', 'ry', 'rz']].astype(int)
+        lp = df.loc[:,'point'].values
+        df.loc[:,'point'] = df.loc[:,'point'].astype(pd.StringDtype)
         self.ofem.supports = pd.concat([self.ofem.supports, df[[
             "point", "ux", "uy", "uz", "rx", "ry", "rz"]]])
+
+        # POINT LOADS
+        if 'Joint Loads - Forces'.upper() in self.s2k:
+            pointloads = self.s2k['Joint Loads - Forces'.upper()]
+            df = pd.DataFrame(pointloads).rename(columns={"Joint": "point",
+                "LoadPat": "loadcase", "F1": "fx", "F2": "fy", "F2": "fz",
+                "M1": "mx", "M2": "my", "M3": "mz"})
+            df.loc[:,['point']] = df.loc[:,['point']].astype(str)
+            df.loc[:,['fx', 'fy', 'fz', 'mx', 'my', 'mz']] = df.loc[:,['fx', 'fy',
+                'fz', 'mx', 'my', 'mz']].astype(float)
+        # self.ofem.pointloads = pd.concat([self.ofem.pointloads, df[[
+
+        # LINE LOADS
+        if 'Frame Loads - Distributed'.upper() in self.s2k:
+            lineloads = self.s2k['Frame Loads - Distributed'.upper()]
+            df = pd.DataFrame(lineloads).rename(columns={"Frame": "element",
+                "LoadPat": "loadcase", "Dir": "direction", "Type": "type",
+                "F1": "f1", "F2": "f2", "F3": "f3", "F4": "f4"})
+
+        # AREA LOADS
+        if 'Area Loads - Uniform'.upper() in self.s2k:
+            arealoads = self.s2k['Area Loads - Uniform'.upper()]
+            al = get_area_loads(arealoads)
+            df = pd.DataFrame(arealoads).rename(columns={"Area": "element",
+                "LoadPat": "loadcase", "Dir": "direction", "UnifLoad": "pz"})
 
         return self.ofem
 
@@ -985,6 +1024,114 @@ class Sap2000Handler:
     def copy(self):
         return copy.deepcopy(self)
 
-if __name__ == "__main__":
-    s2000 = Sap2000Handler("tests/test.xlsx")
-    s2000.to_ofem_struct()
+
+def get_area_loads(arealoads):
+    ofemloads = {
+        'element': [],
+        'loadcase': [],
+        'p1': [],
+        'p2': [],
+        'p3': [],
+        'm1': []
+    }
+    for load in arealoads.itertuples():  
+        ofemloads['element'].append(load['Area'])
+        ofemloads['loadcase'].append(load['LoadPat'])
+        ofemloads['p1'].append(load['UnifLoad'])
+        ofemloads['p2'].append(0)
+        ofemloads['p3'].append(0)
+        ofemloads['m1'].append(0)
+    df = df[df['direction'] == 'Global']
+    df = df[df['pz'] != 0]
+    return df
+
+
+def get_line_loads(lineloads):
+    df = pd.DataFrame(lineloads).rename(columns={"Frame": "element",
+            "LoadPat": "loadcase", "Dir": "direction", "Type": "type",
+            "F1": "f1", "F2": "f2", "F3": "f3", "F4": "f4"})
+    df = df[df['direction'] == 'Global']
+    df = df[df['f1'] != 0]
+    return df
+
+
+def get_normals_sap2000(elements, joints):
+    normals = {}
+    for elem in elements.itertuples():
+        if str(elem.type).startswith("line"):
+            node1 = joints.loc[elem.node1]
+            node2 = joints.loc[elem.node2]
+            v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+            v1 = v1/np.linalg.norm(v1)
+            v3 = np.cross(v1, [0, 0, 1])
+            n3 = np.linalg.norm(v3)
+            v3 = [0, np.sign(v1[2]), 0] if abs(n3) < 1.0e-10 else v3/n3
+            v2 = np.cross(v3, v1)
+        elif str(elem.type).startswith("area"):
+            node1 = joints.loc[elem.node1]
+            node2 = joints.loc[elem.node2]
+            node3 = joints.loc[elem.node3] if elem.type == 'area3' else joints.loc[elem.node4] 
+            v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+            v2 = np.array([node3.x - node1.x, node3.y - node1.y, node3.z - node1.z])
+            v3 = np.cross(v1, v2)
+            v3 = v3/np.linalg.norm(v3)
+
+            v1 = np.cross([0, 0, 1], v3)
+            n1 = np.linalg.norm(v1)
+            v1 = [1, 0, 0] if abs(n1) < 1.0e-10 else v1
+            v1 = v1/np.linalg.norm(v1)
+            v2 = np.cross(v3, v1)
+        elif str(elem.type).startswith("solid"):
+            v1 = np.array([1, 0, 0])
+            v2 = np.array([0, 1, 0])
+            v3 = np.array([0, 0, 1])
+        elif str(elem.type).startswith("point"):
+            v1 = np.array([1, 0, 0])
+            v2 = np.array([0, 1, 0])
+            v3 = np.array([0, 0, 1])
+        else:
+            raise ValueError('element type not recognized')
+        
+        normals[elem.element] = [v1, v2, v3]
+    return normals
+
+
+def get_normals_femix(elements, joints):
+    normals = {}
+    for elem in elements.itertuples():
+        if str(elem.type).startswith("line"):
+            node1 = joints.loc[elem.node1]
+            node2 = joints.loc[elem.node2]
+            v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+            v1 = v1/np.linalg.norm(v1)
+            v3 = np.cross(v1, [0, 1, 0])
+            n3 = np.linalg.norm(v3)
+            v3 = [-np.sign(v1[2]), 0, 0] if abs(n3) < 1.0e-10 else v3/n3
+            v2 = np.cross(v3, v1)
+        elif str(elem.type).startswith("area"):
+            node1 = joints.loc[elem.node1]
+            node2 = joints.loc[elem.node2]
+            node3 = joints.loc[elem.node3] if elem.type == 'area3' else joints.loc[elem.node4] 
+            v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+            v2 = np.array([node3.x - node1.x, node3.y - node1.y, node3.z - node1.z])
+            v3 = np.cross(v1, v2)
+            v3 = v3/np.linalg.norm(v3)
+
+            v1 = np.cross([0, 1, 0], v3)
+            n1 = np.linalg.norm(v1)
+            v1 = np.cross(v3, [1, 0, 0]) if abs(n1) < 1.0e-10 else v1
+            v1 = v1/np.linalg.norm(v1)
+            v2 = np.cross(v3, v1)
+        elif str(elem.type).startswith("solid"):
+            v1 = np.array([1, 0, 0])
+            v2 = np.array([0, 1, 0])
+            v3 = np.array([0, 0, 1])
+        elif str(elem.type).startswith("point"):
+            v1 = np.array([1, 0, 0])
+            v2 = np.array([0, 1, 0])
+            v3 = np.array([0, 0, 1])
+        else:
+            raise ValueError('element type not recognized')
+        
+        normals[elem.element] = [v1, v2, v3]
+    return normals

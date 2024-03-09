@@ -1,0 +1,206 @@
+### Main title of the problem
+Slab mesh
+
+### Main parameters
+    0 # nelem (n. of elements in the mesh)
+    0 # npoin (n. of points in the mesh)
+   52 # nvfix (n. of points with fixed degrees of freedom)
+    1 # ncase (n. of load cases)
+    3 # nselp (n. of sets of element parameters)
+    5 # nmats (n. of sets of material properties)
+   23 # nspen (n. of sets of element nodal properties)
+    3 # nmdim (n. of geometric dimensions)
+    0 # nnscs (n. of nodes with specified coordinate systems)
+    0 # nsscs (n. of sets of specified coordinate systems)
+    0 # nncod (n. of nodes with constrained d.o.f.)
+    0 # nnecc (n. of nodes with eccentric connections)
+
+### Sets of element parameters
+# iselp
+      1
+# element parameters
+    9 # ntype (n. of element type)
+    4 # nnode (n. of nodes per element)
+    1 # ngauq (n. of Gaussian quadrature) (stiffness)
+    2 # ngaus (n. of Gauss points in the formulation) (stiffness)
+    1 # ngstq (n. of Gaussian quadrature) (stresses)
+    2 # ngstr (n. of Gauss points in the formulation) (stresses)
+# iselp
+      2
+# element parameters
+    7 # ntype (n. of element type)
+    2 # nnode (n. of nodes per element)
+    1 # ngauq (n. of Gaussian quadrature) (stiffness)
+    2 # ngaus (n. of Gauss points in the formulation) (stiffness)
+    1 # ngstq (n. of Gaussian quadrature) (stresses)
+    2 # ngstr (n. of Gauss points in the formulation) (stresses)
+# iselp
+      3
+# element parameters
+    9 # ntype (n. of element type)
+    3 # nnode (n. of nodes per element)
+    3 # ngauq (n. of Gaussian quadrature) (stiffness)
+    1 # ngaus (n. of Gauss points in the formulation) (stiffness)
+    3 # ngstq (n. of Gaussian quadrature) (stresses)
+    1 # ngstr (n. of Gauss points in the formulation) (stresses)
+
+### Sets of material properties
+### (Young modulus, Poisson ratio, mass/volume and thermic coeff.
+# imats         young        poiss        dense        alpha
+      1      24855578.060            0.200           23.563            0.000
+### (Young modulus, Poisson ratio, mass/volume and thermic coeff.
+# imats         young        poiss        dense        alpha
+      2     199947978.796              nan           76.973            0.000
+### (Young modulus, Poisson ratio, mass/volume and thermic coeff.
+# imats         young        poiss        dense        alpha
+      3     199947978.796            0.300           76.973            0.000
+### (Young modulus, Poisson ratio, mass/volume and thermic coeff.
+# imats         young        poiss        dense        alpha
+      4      33000000.000            0.200           24.993            0.000
+### (Young modulus, Poisson ratio, mass/volume and thermic coeff.
+# imats         young        poiss        dense        alpha
+      5     210000000.000            0.300           76.973            0.000
+
+### Sets of element nodal properties
+# ispen
+      1
+# inode       barea        binet        bin2l        bin3l        bangl(deg)
+      1               0.003               0.000               0.000               0.000               0.000
+      2               0.003               0.000               0.000               0.000               0.000
+# ispen
+      2
+# inode       barea        binet        bin2l        bin3l        bangl(deg)
+      1               0.503               0.040               0.020               0.020               0.000
+      2               0.503               0.040               0.020               0.020               0.000
+# ispen
+      3
+# inode       barea        binet        bin2l        bin3l        bangl(deg)
+      1               0.027               0.000               0.000               0.002               0.000
+      2               0.027               0.000               0.000               0.002               0.000
+# ispen
+      4
+# inode       thick
+      1               0.400
+      2               0.400
+      3               0.400
+# ispen
+      5
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+# ispen
+      6
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+# ispen
+      7
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+# ispen
+      8
+# inode       thick
+      1               0.400
+      2               0.400
+      3               0.400
+      4               0.400
+# ispen
+      9
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+# ispen
+     10
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+# ispen
+     11
+# inode       thick
+      1               0.400
+      2               0.400
+      3               0.400
+      4               0.400
+# ispen
+     12
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+# ispen
+     13
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+# ispen
+     14
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+# ispen
+     15
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+# ispen
+     16
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+# ispen
+     17
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+# ispen
+     18
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+# ispen
+     19
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+# ispen
+     20
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+# ispen
+     21
+# inode       thick
+      1               0.300
+      2               0.300
+      3               0.300
+      4               0.300
+
+### Element parameter index, material properties index, element nodal
+### properties index and list of the nodes of each element
+# ielem ielps matno ielnp       lnods ...
+      1   276     5     1    
