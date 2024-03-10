@@ -1,12 +1,8 @@
-import sys
-import gmsh
-import numpy as np
 import pathlib
 #import eurocodepy as ec
 from . import ofemlib
 from . import ofemmesh
 from .common import *
-from . import ofemgmsh
 
 class Handler:
 

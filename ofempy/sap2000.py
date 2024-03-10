@@ -1,11 +1,9 @@
 
-import meshio
 import gmsh
 import openpyxl
 import numpy as np
 import pandas as pd
 import pathlib
-from itertools import islice
 from pathlib import Path
 import sys
 import logging
@@ -14,7 +12,7 @@ import copy
 from .common import *
 from .ofemmesh import *
 
-pd.set_option("mode.copy_on_write", True)
+# pd.set_option("mode.copy_on_write", True)
 
 # Element type
 POINT = 15
@@ -211,6 +209,79 @@ def read_excel(filename: str) -> dict:
     supports = dataframes['Joint Restraint Assignments'.upper()]
     lp = supports['Joint'].values
     return dataframes
+
+
+def get_area_loads(arealoads):
+    ofemloads = {
+        'element': [],
+        'loadcase': [],
+        'direction': [],
+        'px': [],
+        'py': [],
+        'pz': []
+    }
+    for load in arealoads.itertuples():  
+        coordsys = load.CoordSys
+        direction = load.Dir
+        value = load.UnifLoad
+        ofemloads['element'].append(load.Area)
+        ofemloads['loadcase'].append(load.LoadPat)
+        ofemloads['direction'].append(coordsys.lower())
+
+        loads = [0.0, 0.0, 0.0]
+        if direction == 'Gravity':
+            loads[2] = -value
+        elif direction == 'X':
+            loads[0] = value
+        elif direction == 'Y':
+            loads[1] = value
+        elif direction == 'Z':
+            loads[2] = value
+        else:
+            raise ValueError('direction not recognized')
+
+        ofemloads['px'].append(loads[0])
+        ofemloads['py'].append(loads[1])
+        ofemloads['pz'].append(loads[2])
+        
+    return ofemloads
+
+
+def get_line_loads(lineloads):
+    ofemloads = {
+        'element': [],
+        'loadcase': [],
+        'direction': [],
+        'fx': [],
+        'fy': [],
+        'fz': [],
+        'mx': []
+    }
+    for load in lineloads.itertuples():  
+        coordsys = load.CoordSys
+        direction = load.Dir
+        value = load.UnifLoad
+        ofemloads['element'].append(load.Area)
+        ofemloads['loadcase'].append(load.LoadPat)
+        ofemloads['direction'].append(coordsys.lower())
+
+        loads = [0.0, 0.0, 0.0]
+        if direction == 'Gravity':
+            loads[2] = -value
+        elif direction == 'X':
+            loads[0] = value
+        elif direction == 'Y':
+            loads[1] = value
+        elif direction == 'Z':
+            loads[2] = value
+        else:
+            raise ValueError('direction not recognized')
+
+        ofemloads['px'].append(loads[0])
+        ofemloads['py'].append(loads[1])
+        ofemloads['pz'].append(loads[2])
+        
+    return ofemloads
 
 
 class Sap2000Handler:
@@ -854,7 +925,7 @@ class Sap2000Handler:
         Args:
             filename (str): the name of the file to be written
         """
-        filename = self._filename + ".msh"
+        filename = self._filename + ".gldat"
 
         # process options
         if model not in ['geometry', 'mesh']:
@@ -883,12 +954,12 @@ class Sap2000Handler:
         # groupsassign = self.s2k['Groups 2 - Assignments'.upper()]
 
         # JOINTS
-        df = pd.DataFrame(joints).rename(columns={"Joint": "point", "XorR": "x", "Y": "y", "Z": "z"})
+        df = joints.rename(columns={"Joint": "point", "XorR": "x", "Y": "y", "Z": "z"})
         df.loc[:, 'point'] = df.loc[:, 'point'].astype(str)
         self.ofem.points = pd.concat([self.ofem.points, df[['point', 'x', 'y', 'z']]])
 
         # ELEMENTS - FRAMES
-        df = pd.DataFrame(elems).rename(columns={"Frame": "element", "JointI": "node1", "JointJ": "node2"})
+        df = elems.rename(columns={"Frame": "element", "JointI": "node1", "JointJ": "node2"})
         df.loc[:, "type"] = "line2"
         # df.loc[:, 'tag'] = df.loc[:, 'tag'].astype(str)
         df['element'] = df['element'].astype(str)
@@ -896,12 +967,12 @@ class Sap2000Handler:
         df.loc[:, 'element'] = "line-" + df['element'].astype(str)
         self.ofem.elements = pd.concat([self.ofem.elements, df[['element', 'type', 'node1', 'node2']]])
 
-        df = pd.DataFrame(framesectassign).rename(columns={"Frame": "element", "AnalSect": "section"})
+        df = framesectassign.rename(columns={"Frame": "element", "AnalSect": "section"})
         df['element'] = df['element'].astype(str)
         df.loc[:, 'element'] = "line-" + df.loc[:,['element']]
         self.ofem.element_sections = pd.concat([self.ofem.element_sections, df[["element", "section"]]])
 
-        df = pd.DataFrame(framesect).rename(columns={
+        df = framesect.rename(columns={
             "SectionName": "section", "Material": "material",
             "Area": "area", "I33": "inertia3", "I22": "inertia2", 
             "TorsConst": "torsion"})
@@ -914,7 +985,7 @@ class Sap2000Handler:
                 "inertia2", "torsion", "angle"]]])
 
         # ELEMENTS - AREAS
-        df = pd.DataFrame(areas).rename(columns={"Area": "element", "Joint1": "node1", "Joint2": "node2", 
+        df = areas.rename(columns={"Area": "element", "Joint1": "node1", "Joint2": "node2", 
                                         "Joint3": "node3", "Joint4": "node4"})
         df['element'] = df['element'].astype(str)
         df[['node1', 'node2', 'node3', 'node4']] = df[['node1', 'node2', 'node3', 'node4']].astype(str) 
@@ -935,12 +1006,12 @@ class Sap2000Handler:
                         df4[['element', 'type', 'node1', 'node2', 'node3', 'node4']]])
         df4 = None
 
-        df = pd.DataFrame(areaassign).rename(columns={"Area": "element", "Section": "section"})
+        df = areaassign.rename(columns={"Area": "element", "Section": "section"})
         df['element'] = df['element'].astype(str)
         df['element'] = "area-" + df['element']
         self.ofem.element_sections = pd.concat([self.ofem.element_sections, df[["element", "section"]]])
 
-        df = pd.DataFrame(areasect).rename(columns={
+        df = areasect.rename(columns={
             "Section": "section", "Material": "material", "Thickness": "thick"})
         df.loc[:, "type"] = "area"
         df.loc[:, "angle"] = 0.0
@@ -955,7 +1026,7 @@ class Sap2000Handler:
         # res = np.matmul(normals['line-1'], np.array([0, 0, 1]))
 
         # MATERIALS
-        df = pd.DataFrame(material).rename(columns={"Material": "material",                                         
+        df = material.rename(columns={"Material": "material",                                         
             "E1": "young", "U12": "poisson", "G12": "shear", 
             "UnitMass": "mass", "UnitWeight": "weight", "A1": "alpha"})
         df.loc[:, 'damping'] = 0.02
@@ -966,7 +1037,7 @@ class Sap2000Handler:
         # SUPPORTS
         supports = self.s2k['Joint Restraint Assignments'.upper()]
         df = supports.rename(columns={"Joint": "point",
-             "U1": "ux", "U2": "uy", "U3": "uz", "R1": "rx", "R2": "ry", "R3": "rz"})
+            "U1": "ux", "U2": "uy", "U3": "uz", "R1": "rx", "R2": "ry", "R3": "rz"})
         df.loc[:,'point'] = df.loc[:,'point'].astype("string")
         df.loc[:,['ux', 'uy', 'uz', 'rx', 'ry', 'rz']] = df.loc[:,['ux', 'uy', 
             'uz', 'rx', 'ry', 'rz']].apply(lambda x: x.replace('Yes', '1').replace('No', '0'))
@@ -991,16 +1062,16 @@ class Sap2000Handler:
         # LINE LOADS
         if 'Frame Loads - Distributed'.upper() in self.s2k:
             lineloads = self.s2k['Frame Loads - Distributed'.upper()]
-            df = pd.DataFrame(lineloads).rename(columns={"Frame": "element",
+            df = lineloads.rename(columns={"Frame": "element",
                 "LoadPat": "loadcase", "Dir": "direction", "Type": "type",
                 "F1": "f1", "F2": "f2", "F3": "f3", "F4": "f4"})
 
         # AREA LOADS
-        if 'Area Loads - Uniform'.upper() in self.s2k:
-            arealoads = self.s2k['Area Loads - Uniform'.upper()]
-            al = get_area_loads(arealoads)
-            df = pd.DataFrame(arealoads).rename(columns={"Area": "element",
-                "LoadPat": "loadcase", "Dir": "direction", "UnifLoad": "pz"})
+        # if 'Area Loads - Uniform'.upper() in self.s2k:
+        #     arealoads = self.s2k['Area Loads - Uniform'.upper()]
+        #     al = get_area_loads(arealoads)
+        #     df = pd.DataFrame(al)
+        #     self.ofem.area_loads = pd.concat([self.ofem.area_loads, df])
 
         return self.ofem
 
@@ -1024,35 +1095,6 @@ class Sap2000Handler:
     def copy(self):
         return copy.deepcopy(self)
 
-
-def get_area_loads(arealoads):
-    ofemloads = {
-        'element': [],
-        'loadcase': [],
-        'p1': [],
-        'p2': [],
-        'p3': [],
-        'm1': []
-    }
-    for load in arealoads.itertuples():  
-        ofemloads['element'].append(load['Area'])
-        ofemloads['loadcase'].append(load['LoadPat'])
-        ofemloads['p1'].append(load['UnifLoad'])
-        ofemloads['p2'].append(0)
-        ofemloads['p3'].append(0)
-        ofemloads['m1'].append(0)
-    df = df[df['direction'] == 'Global']
-    df = df[df['pz'] != 0]
-    return df
-
-
-def get_line_loads(lineloads):
-    df = pd.DataFrame(lineloads).rename(columns={"Frame": "element",
-            "LoadPat": "loadcase", "Dir": "direction", "Type": "type",
-            "F1": "f1", "F2": "f2", "F3": "f3", "F4": "f4"})
-    df = df[df['direction'] == 'Global']
-    df = df[df['f1'] != 0]
-    return df
 
 
 def get_normals_sap2000(elements, joints):
@@ -1094,7 +1136,6 @@ def get_normals_sap2000(elements, joints):
         
         normals[elem.element] = [v1, v2, v3]
     return normals
-
 
 def get_normals_femix(elements, joints):
     normals = {}
