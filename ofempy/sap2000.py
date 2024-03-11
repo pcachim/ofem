@@ -1051,7 +1051,7 @@ class Sap2000Handler:
         df.loc[:,'point'] = df.loc[:,'point'].astype(pd.StringDtype.name)
         self.ofem.supports = pd.concat([self.ofem.supports, df[[
             "point", "ux", "uy", "uz", "rx", "ry", "rz"]]])
-        
+
         # LOAD CASES
         if 'Load Pattern Definitions'.upper() in self.s2k:
             df = self.s2k['Load Pattern Definitions'.upper()]

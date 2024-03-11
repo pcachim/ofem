@@ -28,6 +28,11 @@ class Handler:
         # # sorted_dict_by_keys = {key: coordlist[key] for key in sorted(coordlist)}
         # eleTypes, eleTags, eleNodes = gmsh.model.mesh.getElements(2)
         # elemlist = dict(zip(np.arange(1, 1+len(eleTags[0])), eleTags[0]))
+
+        # prepare the database for elments and nooes base 1
+        struct.mesh.set_points_elems_id(1)
+        struct.set_indexes()
+
         nelems = struct.mesh.num_elements
         npoints = struct.mesh.num_points
         ncases = struct.num_load_cases
@@ -53,7 +58,8 @@ class Handler:
                 count += 1  
                 section_map[(sec, nnode)] = count
             iel += 1
-            element_secs[ielem] = [iel, section_map[(sec, nnode)], nnode, mat_map[mat]]
+            ielement = elem.id
+            element_secs[ielem] = [ielement, section_map[(sec, nnode)], nnode, mat_map[mat]]
         # supports
         nspecnodes = struct.num_supports
         # element types
@@ -63,10 +69,6 @@ class Handler:
         nselp = len(ntypes)
         ndime = 3
         ele_types = [ofem_femix[n] for n in ntypes.keys()]
-
-        # prepare the database for elments and nooes base 1
-        struct.mesh.set_points_elems_id(1)
-        struct.set_indexes()
 
         gldatname = str(path.parent / (path.stem + ".gldat"))
         with open(gldatname, 'w') as file:
@@ -111,7 +113,7 @@ class Handler:
                 if mtype == "isotropic":
                     file.write("### (Young modulus, Poisson ratio, mass/volume and thermic coeff.\n")
                     file.write("# imats         young        poiss        dense        alpha\n")
-                    file.write("  %5d  %10.3f %10.3f %10.3f %10.3f\n" % 
+                    file.write("  %5d  %16.8f %16.8f %16.8f %16.8f\n" % 
                         (imat, mat.young, mat.poisson, mat.weight, mat.alpha))
                 elif mtype == "spring":
                     file.write("### (Young modulus, Poisson ratio, mass/volume and thermic coeff.\n")
@@ -135,12 +137,12 @@ class Handler:
                 if sec_type == "area":
                     file.write("# inode       thick\n")
                     for inode in range(1, nnode+1):
-                        file.write(" %6d     %15.3f\n" % (inode, section['thick']))
+                        file.write(" %6d     %16.8f\n" % (inode, section['thick']))
                 elif sec_type == "line":
                     file.write(
                         "# inode       barea        binet        bin2l        bin3l        bangl(deg)\n")
                     for inode in range(1, nnode+1):
-                        file.write(" %6d     %15.3f     %15.3f     %15.3f     %15.3f     %15.3f\n" % 
+                        file.write(" %6d     %16.8f  %16.8f  %15.8f  %16.8f %16.8f\n" % 
                             (inode, section["area"], section["torsion"],
                             section["inertia2"], section["inertia3"], section["angle"]))
                 else:
@@ -152,12 +154,12 @@ class Handler:
             file.write("# ielem ielps matno ielnp       lnods ...\n")
             for element, values in element_secs.items():
                 ielem = values[0]
-                elemen = struct.elements.loc[element]
-                etype = elemen.type
-                ielps = ntypes[etype] 
-                matno = values[3]
                 ielnp = values[1]
                 nnode = values[2]
+                matno = values[3]
+                elemen = struct.mesh.elements.loc[element]
+                etype = elemen.type
+                ielps = ntypes[etype] 
                 file.write(" %6d %5d %5d %5d    " % (ielem, ielps, matno, ielnp))
                 if False:
                     nodecolumnlist = struct.mesh.get_list_node_columns(etype)
@@ -171,7 +173,8 @@ class Handler:
                 else:
                     nodelist = elemen[ struct.mesh.get_list_node_columns(etype) ]
                     for inode in nodelist:
-                        file.write(" %8d" % struct.mesh.points.at[inode , 'id'])
+                        knode = struct.mesh.points.at[inode, 'id']  
+                        file.write(" %8d" % knode)
                 file.write("\n")
 
             file.write("\n")
@@ -252,7 +255,7 @@ class Handler:
                 file.write("\n")
                 file.write("### Point loads in nodal points\n")
                 file.write("### (global coordinate system)\n")
-                file.write(" iplod  lopop    pload-x    pload-y    pload-z");
+                file.write("# iplod  lopop    pload-x    pload-y    pload-z");
                 file.write("   pload-tx   pload-ty   pload-tz\n");
                 count = 1
                 for poin, values in cases[case]["point"].items():
@@ -271,13 +274,13 @@ class Handler:
                     file.write(" %6d %6d\n" % (count, struct.elements.at[str(elem), 'id']))
                     file.write("# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1\n")      
                     etype = struct.elements.loc[elem].type
-                    nodelist = elemen[ struct.mesh.get_list_node_columns(etype) ]
-                    for inode in nodelist:
+                    nodelist = struct.elements.loc[str(elem), struct.mesh.get_list_node_columns(etype)]
+                    for i, inode in enumerate(nodelist):
                         file.write(" %6d" % struct.mesh.points.at[inode , 'id'])
-                        file.write(" %10.3f %10.3f %10.3f %10.3f %10.3f\n" % 
-                            (values[0], values[1], values[2], 0.0, 0.0))
+                        file.write("  %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f\n" % 
+                            (values[0], values[1], values[2], 0.0, 0.0, 0.0))
                     count += 1
-                
+
                 # LINE LOADS
                 file.write("\n")
                 file.write("### Uniformly distributed load in 3d frame ")

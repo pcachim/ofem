@@ -56,14 +56,14 @@ class OfemMesh:
         return [f"node{i}" for i in range(1, nnodes+1)]
 
     def set_indexes(self):
-        if self._dirtyelements:
-            self._elements['ielement'] = self._elements['element'].copy()
-            self._elements.set_index('ielement', inplace=True)
-            self._dirtyelements = False
-        if self._dirtypoints:
-            ipoint = self._points['point'].copy()
-            self._points.set_index(ipoint, inplace=True)
-            self._dirtypoints = False
+        # if self._dirtyelements:
+        self._elements['ielement'] = self._elements['element'].copy()
+        self._elements.set_index('ielement', inplace=True)
+        self._dirtyelements = False
+        # if self._dirtypoints:
+        ipoint = self._points['point'].copy()
+        self._points.set_index(ipoint, inplace=True)
+        self._dirtypoints = False
 
     def save(self, filename: str, file_format: str = "xfem"):
         if file_format == "xfem":
