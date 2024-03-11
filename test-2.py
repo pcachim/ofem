@@ -1,9 +1,9 @@
-import math
 import os
 import logging
-import pathlib
 from ofempy import ofemlib, sap2000, Handler, ofemmesh
+import ofempy
 from pathlib import Path
+import pandas as pd
 
 logging.basicConfig(level=logging.DEBUG)
 logging.debug("Test started.")
@@ -13,9 +13,8 @@ logging.debug("Test started.")
 
 #fname = os.path.join( os.getcwd(), "tests/test.s2k")
 fname = os.path.join( os.getcwd(), "tests/demo-s2k.xlsx")
-lixo = ofemmesh.OfemData()
-off = sap2000.Sap2000Handler(fname)
-off = off.to_ofem_struct()
+
+off = sap2000.Sap2000Handler(fname).to_ofem_struct()
 off.save("tests/test_5.xfem")
 off.read("tests/test_5.xfem")
 off.save("tests/test_3", file_format=".xlsx")

@@ -62,14 +62,15 @@ class Handler:
         ndime = 3
         ele_types = [ofem_femix[n] for n in ntypes.keys()]
 
-        # prepare the database for elments and noodes base 1
+        # prepare the database for elments and nooes base 1
         struct.mesh.set_points_elems_id(1)
         struct.set_indexes()
 
-        with open(mesh_file, 'w') as file:
+        gldatname = str(path.parent / (path.stem + ".gldat"))
+        with open(gldatname, 'w') as file:
 
             file.write("### Main title of the problem\n")
-            file.write("Slab mesh\n")
+            file.write(struct.title + "\n")
 
             file.write("\n")
             file.write("### Main parameters\n")
@@ -188,7 +189,7 @@ class Handler:
             count = 1
             for fix in struct.supports.itertuples():
                 point = struct.mesh.points.loc[fix.point].id
-                file.write(" %6d %6d      \n" % (count, point))
+                file.write(" %6d %6d      " % (count, point))
                 if ndime == 2:
                     file.write("%6d %6d\n" % (fix.ux, fix.uy, 0))
                 else:
@@ -242,10 +243,8 @@ class Handler:
 
         # LOAD COMBINATIONS
         
-        if path.suffix.lower() == ".gldat":
-            combo_file = str(path.parent / path.stem) + ".cmdat"
-        
-        with open(combo_file, 'w') as file:
+        cmdatname = str(path.parent / (path.stem + ".cmdat"))
+        with open(cmdatname, 'w') as file:
 
             file.write("### Main title of the problem\n")
             file.write("Slab mesh\n")
@@ -279,9 +278,7 @@ class Handler:
 
             file.write("END_OF_FILE\n")
 
-        jobname = str(path.parent / path.stem)
-
-        ofem_file.add(mesh_file)
-        ofem_file.add(combo_file)
+        ofem_file.add(gldatname)
+        ofem_file.add(cmdatname)
 
         return

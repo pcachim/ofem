@@ -7,22 +7,38 @@ import pandas as pd
 import meshio, gmsh
 import sys, io, json, zipfile, re
 
-pd.options.mode.copy_on_write = True
+# pd.options.mode.copy_on_write = True
 elemtypes = list(common.ofem_meshio.keys())
 
-@dataclass
+NTABLES = 10
+
+SECTIONS = 0
+SUPPORTS = 1
+MATERIALS = 2
+ELEMSECTIONS = 3
+POINTLOADS = 4
+LINELOADS = 5
+AREALOADS = 6
+SOLIDLOADS = 7
+LOADCASES = 8
+LOADCOMBINATIONS = 9
+
+
 class OfemMesh:
-    title: str
-    _dirtypoints: bool = False
-    _dirtyelements: bool = False
-    _points = pd.DataFrame(columns= ["point", "x", "y", "z"])
-    _elements = pd.DataFrame(columns= ["element", "type", "node1", "node2"])
-    # "convversion from tags to id"
-    _nodetag_to_id = {}
-    _elemtag_to_id = {}
-    # generall medh parameters
-    _num_points: int = 0
-    _num_elements: int = 0
+    
+    def __init__(self, title: str):
+        self.title = title
+        self._dirtypoints: bool = False
+        self._dirtyelements: bool = False
+        self._points = pd.DataFrame(columns= ["point", "x", "y", "z"])
+        self._elements = pd.DataFrame(columns= ["element", "type", "node1", "node2"])
+        # "convversion from tags to id"
+        self._nodetag_to_id = {}
+        self._elemtag_to_id = {}
+        # generall medh parameters
+        self._num_points: int = 0
+        self._num_elements: int = 0
+        return
     
     def _set_tags_to_id(self, base: int = 1):
         self._num_points = self._points.shape[0]
@@ -35,6 +51,8 @@ class OfemMesh:
         self._set_tags_to_id(base)     
         self._points["id"] = self._points["point"].apply(lambda x: self._nodetag_to_id[x])
         self._elements["id"] = self._elements["element"].apply(lambda x: self._elemtag_to_id[x])
+        self._dirtypoints = False
+        self._dirtyelements = False
         return 
 
     def get_list_node_columns(self, elemtype: str):
@@ -119,9 +137,11 @@ class OfemMesh:
         json_buffer = io.BytesIO(json.dumps(ofem_dict["points"]).encode())
         json_buffer.seek(0)
         self._points = pd.read_json(json_buffer, orient='records')
+        self._dirtypoints = True
         json_buffer = io.BytesIO(json.dumps(ofem_dict["elements"]).encode())
         json_buffer.seek(0)
         self._elements = pd.read_json(json_buffer, orient='records')
+        self._dirtyelements = True
         return
 
     def _to_meshio(self):
@@ -153,14 +173,9 @@ class OfemMesh:
 
         files = self.to_dict()
         json_data = json.dumps(files, indent=2).replace('NaN', 'null')
-        # with open(filename+'.json', 'w') as f:
-        #     f.write(json_data)
 
-        # Create an in-memory buffer
         json_buffer = io.BytesIO(json_data.encode('utf-8'))
-        # Reset buffer position to the beginning
         json_buffer.seek(0)
-        # Create a ZIP file in-memory and add the JSON buffer
         with zipfile.ZipFile(filename, 'a') as zip_file:
             zip_file.writestr('mesh.json', json_buffer.read().decode('utf-8'))        
         return
@@ -384,41 +399,27 @@ class OfemMesh:
             normals[elem.element] = [v1, v2, v3]
         return normals
 
-NTABLES = 10
 
-SECTIONS = 0
-SUPPORTS = 1
-MATERIALS = 2
-ELEMSECTIONS = 3
-POINTLOADS = 4
-LINELOADS = 5
-AREALOADS = 6
-SOLIDLOADS = 7
-LOADCASES = 8
-LOADCOMBINATIONS = 9
-
-@dataclass
 class OfemStruct:
-    title: str
-    _dirty = [False for i in range(NTABLES)]
-    # GEOMETRY
-    _mesh: OfemMesh = field(init=False)
-    # MATERIALS
-    _sections = pd.DataFrame(columns= ["section", "type", "material"])
-    _supports = pd.DataFrame(columns= ["point", "ux", "uy", "uz", "rx", "ry", "rz"])
-    _materials = pd.DataFrame(columns= ["material", "type"])
-    _elemsections = pd.DataFrame(columns= ["element", "section"])
-    # LOADS
-    _loadcases = pd.DataFrame(columns= ["loadcase", "type", "title"])
-    _loadcombinations = pd.DataFrame(columns= ["combination", "type", "title"])
-    _pointloads = pd.DataFrame(columns= ["point", "loadcase", "fx", "fy", "fz", "mx", "my", "mz"])
-    _lineloads = pd.DataFrame(columns= ["element", "loadcase", 'direction', "fx", "fy", "fz", "mx"])
-    _arealoads = pd.DataFrame(columns= ["element", "loadcase", 'direction', "px", "py", "pz"])
-    _solidloads = pd.DataFrame(columns= ["element", "loadcase", "fx", "fy", "fz", "mx", "my", "mz"])
-
-    def __post_init__(self):
-        # Initialize field2 with the value of field1
+    
+    def __init__(self, title: str):
+        self.title = title
+        self._dirty = [False for i in range(NTABLES)]
+        # GEOMETRY
         self._mesh: OfemMesh = OfemMesh(self.title)
+        # MATERIALS
+        self._sections = pd.DataFrame(columns= ["section", "type", "material"])
+        self._supports = pd.DataFrame(columns= ["point", "ux", "uy", "uz", "rx", "ry", "rz"])
+        self._materials = pd.DataFrame(columns= ["material", "type"])
+        self._elemsections = pd.DataFrame(columns= ["element", "section"])
+        # LOADS
+        self._loadcases = pd.DataFrame(columns= ["loadcase", "type", "title"])
+        self._loadcombinations = pd.DataFrame(columns= ["combination", "type", "title"])
+        self._pointloads = pd.DataFrame(columns= ["point", "loadcase", "fx", "fy", "fz", "mx", "my", "mz"])
+        self._lineloads = pd.DataFrame(columns= ["element", "loadcase", 'direction', "fx", "fy", "fz", "mx"])
+        self._arealoads = pd.DataFrame(columns= ["element", "loadcase", 'direction', "px", "py", "pz"])
+        self._solidloads = pd.DataFrame(columns= ["element", "loadcase", "fx", "fy", "fz", "mx", "my", "mz"])
+        return
 
     def set_indexes(self):
         if self._dirty[SECTIONS]:
@@ -488,19 +489,52 @@ class OfemStruct:
         # sections
         if "sections" in dfs:
             self._sections = dfs["sections"]
+            self._dirty[SECTIONS] = True
             
         if "elementsections" in dfs:
             self._elemsections = dfs["elementsections"]
+            self._dirty[ELEMSECTIONS] = True
 
         # supports
         if "supports" in dfs:
             self._supports = dfs["supports"]
+            self._dirty[SUPPORTS] = True
 
         # materials
         if "materials" in dfs:
             self._materials = dfs["materials"]
+            self._dirty[MATERIALS] = True
 
-        self._dirty = [True for i in range(NTABLES)]
+        # point loads
+        if "pointloads" in dfs:
+            self._pointloads = dfs["pointloads"]
+            self._dirty[POINTLOADS] = True
+            
+        # line loads
+        if "lineloads" in dfs:
+            self._lineloads = dfs["lineloads"]
+            self._dirty[LINELOADS] = True
+            
+        # area loads
+        if "arealoads" in dfs:
+            self._arealoads = dfs["arealoads"]
+            self._dirty[AREALOADS] = True   
+            
+        # solid loads
+        if "solidloads" in dfs:
+            self._solidloads = dfs["solidloads"]
+            self._dirty[SOLIDLOADS] = True
+        
+        # load cases
+        if "loadcases" in dfs:
+            self._loadcases = dfs["loadcases"]
+            self._dirty[LOADCASES] = True   
+        
+        # load combinations
+        if "loadcombinations" in dfs:
+            self._loadcombinations = dfs["loadcombinations"]
+            self._dirty[LOADCOMBINATIONS] = True
+
         return
 
     def write_excel(self, filename: str):
@@ -559,6 +593,8 @@ class OfemStruct:
             self.write_xfem(filename)
         else:
             raise ValueError(f"File format {file_format} not recognized")
+
+        # self._dirty = [False for i in range(NTABLES)]
         return
 
     def read_xfem(self, filename: str): 
@@ -574,7 +610,6 @@ class OfemStruct:
                 data = json.load(json_file)
                 self.mesh.from_dict(data)
 
-        self._dirty = [True for i in range(NTABLES)]
         return
 
     def read(self, filename: str, file_format: str = None):
@@ -604,38 +639,68 @@ class OfemStruct:
         }
 
     def from_dict(self, ofem_dict: dict):
+        self._dirty = [False for i in range(NTABLES)]
+
         json_buffer = io.BytesIO(json.dumps(ofem_dict["sections"]).encode())
         json_buffer.seek(0)
         self._sections = pd.read_json(json_buffer, orient='records')
+        if not self._sections.empty:
+            self._dirty[SECTIONS] = True
+        
         json_buffer = io.BytesIO(json.dumps(ofem_dict["elementsections"]).encode())
         json_buffer.seek(0)
         self._elemsections = pd.read_json(json_buffer, orient='records')
+        if not self._elemsections.empty:
+            self._dirty[ELEMSECTIONS] = True
+        
         json_buffer = io.BytesIO(json.dumps(ofem_dict["supports"]).encode())
         json_buffer.seek(0)
         self._supports = pd.read_json(json_buffer, orient='records')
+        if not self._supports.empty:
+            self._dirty[SUPPORTS] = True
+        
         json_buffer = io.BytesIO(json.dumps(ofem_dict["materials"]).encode())
         json_buffer.seek(0)
         self._materials = pd.read_json(json_buffer, orient='records')
+        if not self._materials.empty:
+            self._dirty[MATERIALS] = True
+        
         json_buffer = io.BytesIO(json.dumps(ofem_dict["pointloads"]).encode())
         json_buffer.seek(0)
         self._pointloads = pd.read_json(json_buffer, orient='records')
+        if not self._pointloads.empty:
+            self._dirty[POINTLOADS] = True
+        
         json_buffer = io.BytesIO(json.dumps(ofem_dict["lineloads"]).encode())
         json_buffer.seek(0)
         self._lineloads = pd.read_json(json_buffer, orient='records')
+        if not self._lineloads.empty:
+            self._dirty[LINELOADS] = True
+    
         json_buffer = io.BytesIO(json.dumps(ofem_dict["arealoads"]).encode())
         json_buffer.seek(0)
         self._arealoads = pd.read_json(json_buffer, orient='records')
+        if not self._arealoads.empty:
+            self._dirty[AREALOADS] = True
+        
         json_buffer = io.BytesIO(json.dumps(ofem_dict["solidloads"]).encode())
         json_buffer.seek(0)
         self._solidloads = pd.read_json(json_buffer, orient='records')
+        if not self._solidloads.empty:
+            self._dirty[SOLIDLOADS] = True
+        
         json_buffer = io.BytesIO(json.dumps(ofem_dict["loadcases"]).encode())
         json_buffer.seek(0)
         self._loadcases = pd.read_json(json_buffer, orient='records')
+        if not self._loadcases.empty:
+            self._dirty[LOADCASES] = True
+    
         json_buffer = io.BytesIO(json.dumps(ofem_dict["loadcombinations"]).encode())
         json_buffer.seek(0)
         self._loadcombinations = pd.read_json(json_buffer, orient='records')
+        if not self._loadcombinations.empty: 
+            self._dirty[LOADCOMBINATIONS] = True
 
-        self._dirty = [True for i in range(NTABLES)]
         return
 
     @property
@@ -784,82 +849,82 @@ class OfemStruct:
     def num_load_cases(self):
         return self._loadcases.shape[0]
 
-class OfemData:
-    _point_data: pd.DataFrame = pd.DataFrame(
-        columns = ['point', 'tag', 'type', 'valint', 'valfloat', 'valstr', 'v1', 'v2', 'v3'])
-    _element_data: pd.DataFrame = pd.DataFrame(
-        columns = ['element', 'tag', 'type', 'valint', 'valfloat', 'valstr'])
-    _element_node_data = pd.DataFrame = pd.DataFrame(
-        columns = ['element', 'tag', 'type', 'valint', 'valfloat', 'valstr',
-                    'node1', 'node2'])
+# class OfemData:
+#     _point_data: pd.DataFrame = pd.DataFrame(
+#         columns = ['point', 'tag', 'type', 'valint', 'valfloat', 'valstr', 'v1', 'v2', 'v3'])
+#     _element_data: pd.DataFrame = pd.DataFrame(
+#         columns = ['element', 'tag', 'type', 'valint', 'valfloat', 'valstr'])
+#     _element_node_data = pd.DataFrame = pd.DataFrame(
+#         columns = ['element', 'tag', 'type', 'valint', 'valfloat', 'valstr',
+#                     'node1', 'node2'])
 
-    def read_xfem(self, filename: str): 
-        path = Path(filename)
-        if path.suffix != ".xfem":
-            raise ValueError(f"File {filename} is not a .xfem file")
+#     def read_xfem(self, filename: str): 
+#         path = Path(filename)
+#         if path.suffix != ".xfem":
+#             raise ValueError(f"File {filename} is not a .xfem file")
 
-        with zipfile.ZipFile(filename, 'r') as zip_file:
-            with zip_file.open('data.json') as json_file:
-                data = json.load(json_file)
-                self.from_dict(data)
+#         with zipfile.ZipFile(filename, 'r') as zip_file:
+#             with zip_file.open('data.json') as json_file:
+#                 data = json.load(json_file)
+#                 self.from_dict(data)
 
-        self._dirty = [True for i in range(NTABLES)]
-        return
+#         self._dirty = [True for i in range(NTABLES)]
+#         return
 
-    def read(self, filename: str, file_format: str = None):
-        if file_format == None:
-            file_format = Path(filename).suffix
+#     def read(self, filename: str, file_format: str = None):
+#         if file_format == None:
+#             file_format = Path(filename).suffix
 
-        if file_format == ".xlsx":
-            self.read_excel(filename)
-        elif file_format == ".xfem":
-            self.read_xfem(filename)
-        else:
-            raise ValueError(f"File format {file_format} not recognized")
-        return
+#         if file_format == ".xlsx":
+#             self.read_excel(filename)
+#         elif file_format == ".xfem":
+#             self.read_xfem(filename)
+#         else:
+#             raise ValueError(f"File format {file_format} not recognized")
+#         return
 
-    def to_dict(self):
-        return {
-            "point_data": self._point_data.to_dict(orient="records"), 
-            "element_data": self._element_data.to_dict(orient="records"), 
-            "element_node_data": self._element_node_data.to_dict(orient="records"),
-        }
+#     def to_dict(self):
+#         return {
+#             "point_data": self._point_data.to_dict(orient="records"), 
+#             "element_data": self._element_data.to_dict(orient="records"), 
+#             "element_node_data": self._element_node_data.to_dict(orient="records"),
+#         }
 
-    def from_dict(self, ofem_dict: dict):
-        json_buffer = io.BytesIO(json.dumps(ofem_dict["point_data"]).encode())
-        json_buffer.seek(0)
-        self.mesh._points = pd.read_json(json_buffer, orient='records')
-        json_buffer = io.BytesIO(json.dumps(ofem_dict["element_data"]).encode())
-        json_buffer.seek(0)
-        self.mesh._elements = pd.read_json(json_buffer, orient='records')
-        json_buffer = io.BytesIO(json.dumps(ofem_dict["element_node_data"]).encode())
-        json_buffer.seek(0)
-        self._sections = pd.read_json(json_buffer, orient='records')
-        return
+#     def from_dict(self, ofem_dict: dict):
+#         json_buffer = io.BytesIO(json.dumps(ofem_dict["point_data"]).encode())
+#         json_buffer.seek(0)
+#         self.mesh._points = pd.read_json(json_buffer, orient='records')
+#         json_buffer = io.BytesIO(json.dumps(ofem_dict["element_data"]).encode())
+#         json_buffer.seek(0)
+#         self.mesh._elements = pd.read_json(json_buffer, orient='records')
+#         json_buffer = io.BytesIO(json.dumps(ofem_dict["element_node_data"]).encode())
+#         json_buffer.seek(0)
+#         self._sections = pd.read_json(json_buffer, orient='records')
+#         return
 
-    @property
-    def point_data(self):
-        return self._point_data
+#     @property
+#     def point_data(self):
+#         return self._point_data
     
-    @point_data.setter
-    def point_data(self, pointdata):
-        self._point_data = pd.concat(self._point_data, pointdata)
-        return
+#     @point_data.setter
+#     def point_data(self, pointdata):
+#         self._point_data = pd.concat(self._point_data, pointdata)
+#         return
     
-    @property
-    def element_data(self):
-        return self._point_data
+#     @property
+#     def element_data(self):
+#         return self._point_data
     
-    @element_data.setter
-    def element_data(self, elementdata):
-        self._element_data = pd.concat(self._element_data, elementdata)
-        return
+#     @element_data.setter
+#     def element_data(self, elementdata):
+#         self._element_data = pd.concat(self._element_data, elementdata)
+#         return
     
-    @property
-    def element_node_data(self):
-        return self._point_data
+#     @property
+#     def element_node_data(self):
+#         return self._point_data
     
-    @element_node_data.setter
-    def element_node_data(self, elementnodedata):
-        self._element_node_data = pd.concat(self._element_node_data, elementnodedata)
-        return
+#     @element_node_data.setter
+#     def element_node_data(self, elementnodedata):
+#         self._element_node_data = pd.concat(self._element_node_data, elementnodedata)
+#         return

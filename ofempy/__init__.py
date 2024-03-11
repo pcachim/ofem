@@ -8,17 +8,17 @@ with the following features:
 
 __version__ = "0.1.0"
 
-from . import gmshapp
+from . import ofemmesh
 from . import sap2000
 from . import femix
 from . import ofemhandler
 from . import meshstruct
-from . import ofemmesh
 from . import pyfem
-from .sap2000 import Sap2000Handler
+from . import gmshapp
 from .femix import femix_handler
 from .ofemhandler import ofem_handler
 from .ofemlibhandler import Handler
+from .sap2000 import Sap2000Handler
 from .ofemgmsh import msh_handler
 from .gmshapp import gmshApp
 from .ofemlib import ofemSolver, ofemResults, OfemlibFile

@@ -39,7 +39,7 @@ class OfemStructFile:
         if self.path.suffix == '.csv':
             self.data = pd.read_csv(self.fname)
         elif self.path.suffix == '.dat':
-            self.data = pd.read_csv(self.fname, sep='\s+', header=None)
+            self.data = pd.read_csv(self.fname, sep=r'\s+', header=None)
         elif self.path.suffix == '.xlsx':
             self.data = pd.read_excel(self.fname)
         elif self.path.suffix == '.msh':

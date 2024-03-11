@@ -156,7 +156,7 @@ class OfemlibFile:
 
         with zipfile.ZipFile(self.filename, 'r') as ofem_file:
             with ofem_file.open(file_to_extract.name) as file:
-                df = pd.read_csv(file, sep='\s+', header=None)
+                df = pd.read_csv(file, sep=r'\s+', header=None)
                 df.columns = ['point', 'values']
 
         return df
@@ -629,7 +629,7 @@ def ofemReadCSV(filename: str) -> pd.DataFrame:
 
 
 def ofemReadPVA(filename: str) -> pd.DataFrame:
-    df = pd.read_csv(filename, sep='\s+', header=None)
+    df = pd.read_csv(filename, sep=r'\s+', header=None)
     df.columns = ['point', 'values']
     return df
 
