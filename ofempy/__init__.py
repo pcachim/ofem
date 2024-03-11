@@ -21,6 +21,6 @@ from .ofemlibhandler import Handler
 from .sap2000 import Sap2000Handler
 from .ofemgmsh import msh_handler
 from .gmshapp import gmshApp
-from .ofemlib import ofemSolver, ofemResults, OfemlibFile
+from .ofemlib import solver, results, OfemSolverFile
 from .meshstruct import Slab, Beam
 from .ofemstructfile import OfemStructFile

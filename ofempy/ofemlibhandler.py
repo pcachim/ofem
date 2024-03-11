@@ -18,7 +18,7 @@ class Handler:
         path = pathlib.Path(mesh_file)
 
         jobname = str(path.parent / (path.stem + ".ofem"))
-        ofem_file = ofemlib.OfemlibFile(jobname, overwrite=True)
+        ofem_file = ofemlib.OfemSolverFile(jobname, overwrite=True)
 
         # nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(2, includeBoundary=True)
         # coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))
@@ -58,6 +58,8 @@ class Handler:
         nspecnodes = struct.num_supports
         # element types
         ntypes = dict(struct.elements['type'].value_counts())
+        for i, k in enumerate(dict(ntypes.items())):
+            ntypes[k] = i+1
         nselp = len(ntypes)
         ndime = 3
         ele_types = [ofem_femix[n] for n in ntypes.keys()]
@@ -103,19 +105,19 @@ class Handler:
             file.write("\n")
             file.write("### Sets of material properties\n")
             for mat in struct.materials.itertuples():
-                matn = mat.material 
+                matn = mat.material
                 imat = mat_map[matn]
                 mtype = mat.type.lower()
                 if mtype == "isotropic":
                     file.write("### (Young modulus, Poisson ratio, mass/volume and thermic coeff.\n")
                     file.write("# imats         young        poiss        dense        alpha\n")
-                    file.write("  %5d  %16.3f %16.3f %16.3f %16.3f\n" % 
+                    file.write("  %5d  %10.3f %10.3f %10.3f %10.3f\n" % 
                         (imat, mat.young, mat.poisson, mat.weight, mat.alpha))
                 elif mtype == "spring":
                     file.write("### (Young modulus, Poisson ratio, mass/volume and thermic coeff.\n")
                     file.write("# imats         stifn        stift-1        stift-2\n")
                     file.write("# imats         subre\n")
-                    file.write("  %5d  %16.3f %16.3f %16.3f %16.3f\n" % 
+                    file.write("  %5d  %10.3f %10.3f %10.3f %10.3f\n" % 
                         (i+1,
                         struct.materials['k'][i], 0.0, 0.0, 0.0))
                 else:
@@ -150,21 +152,26 @@ class Handler:
             file.write("# ielem ielps matno ielnp       lnods ...\n")
             for element, values in element_secs.items():
                 ielem = values[0]
-                ielps = ntypes[struct.elements.loc[element].type]  
+                elemen = struct.elements.loc[element]
+                etype = elemen.type
+                ielps = ntypes[etype] 
                 matno = values[3]
                 ielnp = values[1]
                 nnode = values[2]
-                elemen = struct.elements.loc[element]
-                etype = elemen.type
                 file.write(" %6d %5d %5d %5d    " % (ielem, ielps, matno, ielnp))
-                nodecolumnlist = struct.mesh.get_list_node_columns(etype)
-                nodelist = elemen[ nodecolumnlist ]
-                for inode in range(nnode):
-                    icol = nodecolumnlist[inode]
-                    inode = nodelist[icol]
-                    lnode = struct.mesh.points.at[inode, 'id']
-                    # file.write(" %8d" % eleNodes[0][count])
-                    file.write(" %8d" % lnode)
+                if False:
+                    nodecolumnlist = struct.mesh.get_list_node_columns(etype)
+                    nodelist = elemen[ nodecolumnlist ]
+                    for inode in range(nnode):
+                        inode = nodecolumnlist[inode]
+                        inode = nodelist[inode]
+                        lnode = struct.mesh.points.at[inode, 'id']
+                        # file.write(" %8d" % eleNodes[0][count])
+                        file.write(" %8d" % lnode)
+                else:
+                    nodelist = elemen[ struct.mesh.get_list_node_columns(etype) ]
+                    for inode in nodelist:
+                        file.write(" %8d" % struct.mesh.points.at[inode , 'id'])
                 file.write("\n")
 
             file.write("\n")
@@ -197,16 +204,25 @@ class Handler:
                 count += 1
                 
             # LOADCASES - preparing the load cases
-            
-            
-            
+
+            cases = struct.get_cases()
+
             # LOADCASES - writing the load cases
-            for i in range(ncases):
+            for i, case in enumerate(cases.keys()):
+                ngrav = 1 if cases[case]["grav"] > 0 else 0
+                nface = len(cases[case]["area"])
+                nplod = len(cases[case]["point"])
+                nudis = len(cases[case]["line"])
+                ntemp = 0
+                nepoi = 0
+                nprva = 0
+                nedge = 0
+
                 file.write("\n")
                 file.write("# ===================================================================\n")
 
                 file.write("\n")
-                file.write("### Load case n. %8d\n" % 1)
+                file.write("### Load case n. %8d\n" % cases[case]["index"])
 
                 file.write("\n")
                 file.write("### Title of the load case\n")
@@ -214,67 +230,108 @@ class Handler:
 
                 file.write("\n")
                 file.write("### Load parameters\n")
-                file.write("%5d # nplod (n. of point loads in nodal points)\n" % 0)
-                file.write("%5d # ngrav (gravity load flag: 1-yes0-no)\n" % 0)
-                file.write("%5d # nedge (n. of edge loads) (F.E.M. only)\n" % 0)
-                file.write("%5d # nface (n. of face loads) (F.E.M. only)\n" % nelems)
-                file.write("%5d # ntemp (n. of points with temperature variation) (F.E.M. only)\n" % 0)
-                file.write("%5d # nudis (n. of uniformly distributed loads " % 0)
-                file.write("(3d frames and trusses only)\n")
-                file.write("%5d # nepoi (n. of element point loads) (3d frames and trusses only)\n" % 0)
-                file.write("%5d # nprva (n. of prescribed and non zero degrees of freedom)\n" % 0)
+                file.write("%5d # nplod (n. of point loads in nodal points)\n" % nplod)
+                file.write("%5d # ngrav (gravity load flag: 1-yes0-no)\n" % ngrav)
+                file.write("%5d # nedge (n. of edge loads) (F.E.M. only)\n" % nedge)
+                file.write("%5d # nface (n. of face loads) (F.E.M. only)\n" % nface)
+                file.write("%5d # ntemp (n. of points with temperature variation) (F.E.M. only)\n" % ntemp)
+                file.write("%5d # nudis (n. of uniformly distributed loads (3d frames and trusses only)\n"
+                            % nudis)
+                file.write("%5d # nepoi (n. of element point loads) (3d frames and trusses only)\n" % nepoi)
+                file.write("%5d # nprva (n. of prescribed and non zero degrees of freedom)\n" % nprva)
 
+                # GRAVITY LOAD
+                file.write("\n")
+                file.write("### Gravity load (gravity acceleration)\n")
+                file.write("### (global coordinate system)\n")
+                file.write("#      gravi-x      gravi-y     gravi-z\n")
+                if ngrav == 1:
+                    file.write("    0.00000000   0.00000000  %10.8lf\n" % (cases[case]["grav"]))
+
+                # POINT LOADS
+                file.write("\n")
+                file.write("### Point loads in nodal points\n")
+                file.write("### (global coordinate system)\n")
+                file.write(" iplod  lopop    pload-x    pload-y    pload-z");
+                file.write("   pload-tx   pload-ty   pload-tz\n");
+                count = 1
+                for poin, values in cases[case]["point"].items():
+                    file.write(" %5d %5d  " % (count, struct.points.at[str(poin), 'id']))
+                    file.write(" %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f" % cases[case]["poin"])
+                    file.write("\n")
+                    count += 1
+
+                # FACE LOADS
                 file.write("\n")
                 file.write("### Face load (loaded element, loaded points and load value)\n")
                 file.write("### (local coordinate system)\n")
-                count = 0
-                for i, elem in enumerate(eleTags[0]):
+                count = 1
+                for elem, values in cases[case]["area"].items():
                     file.write("# iface  loelf\n")
-                    file.write(" %5d %5d\n" % (i+1, i+1))
-                    file.write("# lopof       prfac-n   prfac-mb   prfac-mt\n")
-                    for j in range(nnode):
-                        # inode = eleNodes[0][count]
-                        inode = nodelist[eleNodes[0][count]]
-                        file.write(" %5d %16.3f %16.3f %16.3f\n" % (inode, load, 0.0, 0.0))
-                        count += 1
+                    file.write(" %6d %6d\n" % (count, struct.elements.at[str(elem), 'id']))
+                    file.write("# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1\n")      
+                    etype = struct.elements.loc[elem].type
+                    nodelist = elemen[ struct.mesh.get_list_node_columns(etype) ]
+                    for inode in nodelist:
+                        file.write(" %6d" % struct.mesh.points.at[inode , 'id'])
+                        file.write(" %10.3f %10.3f %10.3f %10.3f %10.3f\n" % 
+                            (values[0], values[1], values[2], 0.0, 0.0))
+                    count += 1
+                
+                # LINE LOADS
+                file.write("\n")
+                file.write("### Uniformly distributed load in 3d frame ")
+                file.write("or truss elements (loaded element\n")
+                file.write("### and load value) (local coordinate system)\n")
+                file.write("# iudis  loelu    udisl-x    udisl-y    udisl-z  ")
+                file.write(" udisl-tx   udisl-ty   udisl-tz\n")
+                count = 1
+                for elem, values in cases[case]["line"].items():
+                    file.write(" %5d %5d  " % (count, struct.elements.at[str(elem), 'id']))
+                    file.write(" %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f\n" % 
+                        (values[0], values[1], values[2], values[3], 0.0, 0.0))
+                    count += 1
+
+                # TEMPERATURE VARIATION
+                file.write("\n")
+                file.write("### Thermal load (loaded point and temperature variation)\n")
+                file.write("# itemp  lopot     tempn\n")
+
+                # PRESCRIBED VARIABLES
+                file.write("\n")
+                file.write("### Prescribed variables (point, degree of freedom and prescribed value)\n")
+                file.write("### (global coordinate system)\n")
+                file.write("# iprva  nnodp  ndofp    prval\n")
 
             file.write("\n")
             file.write("END_OF_FILE\n")
 
         # LOAD COMBINATIONS
-        
+
+        combos = struct.get_combos()
         cmdatname = str(path.parent / (path.stem + ".cmdat"))
+
         with open(cmdatname, 'w') as file:
 
             file.write("### Main title of the problem\n")
-            file.write("Slab mesh\n")
+            file.write(struct.title + "\n")
 
             file.write("### Number of combinations\n")
-            file.write("      2 # ncomb (number of combinations)\n\n")
+            file.write("%6d # ncomb (number of combinations)\n\n" % len(combos))
 
-            file.write("### Combination title\n")
-            file.write("G\n")
-            file.write("### Combination number\n")
-            file.write("# combination n. (icomb) and number off load cases in combination (ncase)\n")
-            file.write("# icomb    lcase\n")
-            file.write("      1        1\n")
-            file.write("### Coeficients\n")
-            file.write("# load case number (icase) and load coefficient (vcoef)\n")
-            file.write("# icase      vcoef\n")
-            file.write("      1       1.00\n")
-            file.write("\n")
-
-            file.write("### Combination title\n")
-            file.write("1.35G\n")
-            file.write("### Combination number\n")
-            file.write("# combination n. (icomb) and number off load cases in combination (ncase)\n")
-            file.write("# icomb    lcase\n")
-            file.write("      2        1\n")
-            file.write("### Coeficients\n")
-            file.write("# load case number (icase) and load coefficient (vcoef)\n")
-            file.write("# icase      vcoef\n")
-            file.write("      1       1.35\n")
-            file.write("\n")
+            for i, combo in enumerate(combos.keys()):
+                file.write("### Combination title\n")
+                file.write(combo + "\n")
+                file.write("### Combination number\n")
+                file.write("# combination n. (icomb) and number of load cases in combination (ncase)\n")
+                file.write("# icomb    lcase\n")
+                file.write(" %6d   %6d\n" % (i+1, len(combos[combo]['coefs'])))
+                file.write("### Coeficients\n")
+                file.write("# load case number (icase) and load coefficient (vcoef)\n")
+                file.write("# icase      vcoef\n")
+                for icase, coef in combos[combo]['coefs'].items():
+                    file.write(" %6d  %10.3f\n" % (cases[icase]['index'], coef))
+                file.write("\n")
 
             file.write("END_OF_FILE\n")
 

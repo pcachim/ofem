@@ -239,7 +239,7 @@ class femix_handler:
         #filename = os.path.join(os.getcwd(), 'scripts/tri')
         if filename.endswith(".gldat"):
             filename = filename[:len(filename) - 6]
-        ofemlib.ofemSolver(filename, 'd', 1.0e-6)
+        ofemlib.solver(filename, 'd', 1.0e-6)
 
 
     def posprocess(self, filename: str, options: list):
@@ -247,7 +247,7 @@ class femix_handler:
             filename = filename[:len(filename) - 6]
         for option in options:
             #option = {'lcaco': 'l', 'cstyn': 'y', 'stnod': 'a', 'csryn': 'n', 'ksres': 1}
-            ofemlib.ofemResults(filename, **option)
+            ofemlib.results(filename, **option)
             # femixlib.posfemix(filename, option, lcaco='l', cstyn='y', stnod='a', csryn='n', ksres=1)
         return
 

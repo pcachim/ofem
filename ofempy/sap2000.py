@@ -255,29 +255,35 @@ def get_line_loads(lineloads):
         'fz': [],
         'mx': []
     }
+#    Type	DistType	RelDistA	RelDistB	
+#                   AbsDistA	AbsDistB	FOverLA	 FOverLB
     for load in lineloads.itertuples():  
         coordsys = load.CoordSys
         direction = load.Dir
-        value = load.UnifLoad
-        ofemloads['element'].append(load.Area)
+        value = load.FOverLA
+        ftype = load.Type
+        ofemloads['element'].append(load.Frame)
         ofemloads['loadcase'].append(load.LoadPat)
         ofemloads['direction'].append(coordsys.lower())
 
-        loads = [0.0, 0.0, 0.0]
-        if direction == 'Gravity':
+        loads = [0.0, 0.0, 0.0, 0.0]
+        if direction == 'Gravity' and ftype == 'Force':
             loads[2] = -value
-        elif direction == 'X':
+        elif direction == 'X' and ftype == 'Force':
             loads[0] = value
-        elif direction == 'Y':
+        elif direction == 'Y' and ftype == 'Force':
             loads[1] = value
-        elif direction == 'Z':
+        elif direction == 'Z' and ftype == 'Force':
             loads[2] = value
+        elif direction == 'X' and ftype == 'Moment':
+            loads[3] = value
         else:
             raise ValueError('direction not recognized')
 
-        ofemloads['px'].append(loads[0])
-        ofemloads['py'].append(loads[1])
-        ofemloads['pz'].append(loads[2])
+        ofemloads['fx'].append(loads[0])
+        ofemloads['fy'].append(loads[1])
+        ofemloads['fz'].append(loads[2])
+        ofemloads['mx'].append(loads[3])
         
     return ofemloads
 
@@ -1045,30 +1051,46 @@ class Sap2000Handler:
         df.loc[:,'point'] = df.loc[:,'point'].astype(pd.StringDtype.name)
         self.ofem.supports = pd.concat([self.ofem.supports, df[[
             "point", "ux", "uy", "uz", "rx", "ry", "rz"]]])
+        
+        # LOAD CASES
+        if 'Load Pattern Definitions'.upper() in self.s2k:
+            df = self.s2k['Load Pattern Definitions'.upper()]
+            df = df.rename(columns={"LoadPat": "case", "DesignType": "type", "SelfWtMult": "gravity"})
+            self.ofem.load_cases = pd.concat([self.ofem.load_cases, df[["case", "type", "gravity"]]])
+
+        # LOAD COMBINATIONS
+        if 'Combination Definitions'.upper() in self.s2k:
+            df = self.s2k['Combination Definitions'.upper()]
+            df = df.rename(columns={"ComboName": "combo", "ComboType": "type", "CaseName": "case", "ScaleFactor": "coef"})
+            df.loc[:,['type']] = df.loc[:,['type']].apply(lambda x: x.replace('Linear Add', 'add').replace('Envelope', 'envelope'))
+            self.ofem.load_combinations = pd.concat([self.ofem.load_combinations, df[["combo", "type", "case", "coef"]]])
 
         # POINT LOADS
         if 'Joint Loads - Forces'.upper() in self.s2k:
             pointloads = self.s2k['Joint Loads - Forces'.upper()]
-            df = pd.DataFrame(pointloads).rename(columns={"Joint": "point",
+            df = pointloads.rename(columns={"Joint": "point",
                 "LoadPat": "loadcase", "F1": "fx", "F2": "fy", "F2": "fz",
                 "M1": "mx", "M2": "my", "M3": "mz"})
             df.loc[:,['point']] = df.loc[:,['point']].astype(str)
             df.loc[:,['fx', 'fy', 'fz', 'mx', 'my', 'mz']] = df.loc[:,['fx', 'fy',
                 'fz', 'mx', 'my', 'mz']].astype(float)
-        # self.ofem.pointloads = pd.concat([self.ofem.pointloads, df[[
+            df.loc[:,['point']] = df.loc[:,['point']].astype(str)
+            self.ofem.point_loads = pd.concat([self.ofem.point_loads, df])
 
         # LINE LOADS
         if 'Frame Loads - Distributed'.upper() in self.s2k:
-            lineloads = self.s2k['Frame Loads - Distributed'.upper()]
-            df = lineloads.rename(columns={"Frame": "element",
-                "LoadPat": "loadcase", "Dir": "direction", "Type": "type",
-                "F1": "f1", "F2": "f2", "F3": "f3", "F4": "f4"})
+            df = self.s2k['Frame Loads - Distributed'.upper()]
+            df = pd.DataFrame( get_line_loads(df) )
+            df.loc[:,['element']] = df.loc[:,['element']].astype(str)
+            df['element'] = "line-" + df['element']
+            self.ofem.line_loads = pd.concat([self.ofem.line_loads, df])
 
         # AREA LOADS
         if 'Area Loads - Uniform'.upper() in self.s2k:
-            arealoads = self.s2k['Area Loads - Uniform'.upper()]
-            al = get_area_loads(arealoads)
-            df = pd.DataFrame(al)
+            df = self.s2k['Area Loads - Uniform'.upper()]
+            df = pd.DataFrame( get_area_loads(df) )
+            df.loc[:,['element']] = df.loc[:,['element']].astype(str)
+            df['element'] = "area-" + df['element']
             self.ofem.area_loads = pd.concat([self.ofem.area_loads, df])
 
         return self.ofem

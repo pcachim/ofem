@@ -88,7 +88,7 @@ ofemfilessuffix = ['.gldat', '.cmdat', '.log', '.nldat', '.srdat',
                 '_gpstr.csv', '_react.csv', '_fixfo.csv', '_csv.info']
 
 
-class OfemlibFile:
+class OfemSolverFile:
     def __init__(self, filename: str, overwrite: bool=False):
         path = pathlib.Path(filename)
         suffix = path.suffix.lower()
@@ -374,7 +374,7 @@ def posfemix2(filename: str, code: int=1, lcaco: str='l', cstyn: str='y',
     return n
 
 
-def ofemResults(filename:str, codes: list, **kwargs):
+def results(filename:str, codes: list, **kwargs):
     """_summary_
 
     Args:
@@ -384,7 +384,7 @@ def ofemResults(filename:str, codes: list, **kwargs):
         error code: 0 if no error, 1 if error
     """""""""
 
-    ofem_file = OfemlibFile(filename)
+    ofem_file = OfemSolverFile(filename)
     ofem_file.unpack_bin()
     # extract_ofem_bin(filename)
 
@@ -485,7 +485,7 @@ def ofemResults(filename:str, codes: list, **kwargs):
     return captured_stdout
 
 
-def ofemSolver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
+def solver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
     """Reads the input file and solves the system of linear equations
 
     Args:
@@ -497,7 +497,7 @@ def ofemSolver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
         error code: 0 if no error, 1 if error
     """
     
-    ofem_file = OfemlibFile(filename)
+    ofem_file = OfemSolverFile(filename)
     ofem_file.unpack_dat()
     ofem_file.delete_files()
 
@@ -562,7 +562,7 @@ def ofemnlSolver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
         error code: 0 if no error, 1 if error
     """
 
-    ofem_file = OfemlibFile(filename)
+    ofem_file = OfemSolverFile(filename)
     ofem_file.unpack_dat()
     ofem_file.delete_files()
     # extract_ofem_dat(filename)

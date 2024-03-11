@@ -356,7 +356,7 @@ class Slab:
             mesh_file = path.with_suffix('').resolve() + ".gldat"
 
         jobname = str(path.parent / (path.stem + ".ofem"))
-        ofem_file = ofemlib.OfemlibFile(jobname, overwrite=True)
+        ofem_file = ofemlib.OfemSolverFile(jobname, overwrite=True)
 
         nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(2, includeBoundary=True)
         coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))
@@ -536,12 +536,12 @@ class Slab:
 
         ofem_file.add(mesh_file)
         ofem_file.add(combo_file)
-        txt = ofemlib.ofemSolver(jobname)
+        txt = ofemlib.solver(jobname)
 
         options = {'csryn': 'n', 'ksres': 2, 'lcaco': 'c'}
         # codes = [ofemlib.DI_CSV, ofemlib.AST_CSV, ofemlib.EST_CSV, ofemlib.RS_CSV]
         codes = [ofemlib.DI_CSV, ofemlib.AST_CSV, ofemlib.EST_CSV]
-        txt = ofemlib.ofemResults(jobname, codes, **options)
+        txt = ofemlib.results(jobname, codes, **options)
 
         df = ofemlib.get_csv_from_ofem(jobname, ofemlib.DI_CSV)
         for i in range(1, 4):
@@ -676,7 +676,7 @@ class Beam:
             mesh_file = path.with_suffix('').resolve() + ".gldat"
 
         jobname = str(path.parent / (path.stem + ".ofem"))
-        ofem_file = ofemlib.OfemlibFile(jobname, overwrite=True)
+        ofem_file = ofemlib.OfemSolverFile(jobname, overwrite=True)
 
         nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(1, includeBoundary=True)
         coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))
@@ -848,11 +848,11 @@ class Beam:
             file.write("\n")
 
         jobname = str(path.parent / path.stem)
-        ofemlib.ofemSolver(jobname)
+        ofemlib.solver(jobname)
 
         options = {'csryn': 'n', 'ksres': 2}
         codes = [ofemlib.DI_CSV, ofemlib.AST_CSV, ofemlib.EST_CSV, ofemlib.RS_CSV]
-        ofemlib.ofemResults(jobname, codes, **options)
+        ofemlib.results(jobname, codes, **options)
 
         df = ofemlib.get_csv_from_ofem(jobname, ofemlib.DI_CSV)
         for i in range(1, 4):

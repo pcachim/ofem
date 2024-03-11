@@ -35,16 +35,11 @@ class OfemMesh:
         # "convversion from tags to id"
         self._nodetag_to_id = {}
         self._elemtag_to_id = {}
-        # generall medh parameters
-        self._num_points: int = 0
-        self._num_elements: int = 0
         return
     
     def _set_tags_to_id(self, base: int = 1):
-        self._num_points = self._points.shape[0]
-        self._nodetag_to_id = dict(zip(self._points["point"].values, np.arange(base, self._num_points+base)))
-        self._num_elements = self._elements.shape[0]   
-        self._elemtag_to_id = dict(zip(self._elements["element"].values, np.arange(base, self._num_elements+base)))
+        self._nodetag_to_id = dict(zip(self._points["point"].values, np.arange(base, self.num_points+base)))
+        self._elemtag_to_id = dict(zip(self._elements["element"].values, np.arange(base, self.num_elements+base)))
         return
 
     def set_points_elems_id(self, base: int = 1):
@@ -89,12 +84,10 @@ class OfemMesh:
         # coordinates
         self._points = dfs["points"]
         self._points["point"] = self._points["point"].astype(str)
-        self._num_points = self._points.shape[0]
 
         # elements
         self._elements = dfs["elements"]
         self._elements["element"] = self._elements["element"].astype(str)
-        self._num_elements = self._elements.shape[0]
         self.elemlist = {k: self._elements[self._elements["type"] == k]["element"].values for k in elemtypes}  
 
         self._dirtypoints = True
@@ -274,11 +267,11 @@ class OfemMesh:
         return self._dirtypoints and self._dirtyelements
     @property
     def num_elements(self):
-        return self._num_elements
+        return self._elements.shape[0]
     
     @property
     def num_points(self):
-        return self._num_points
+        return self._points.shape[0]
 
     @property
     def points(self):
@@ -477,13 +470,11 @@ class OfemStruct:
         if "points" in dfs:
             self.mesh._points = dfs["points"]
             self.mesh._points["point"] = self.mesh._points["point"].astype(str)
-            self.mesh._num_points = self.mesh._points.shape[0]
 
         # elements
         if "elements" in dfs:
             self.mesh._elements = dfs["elements"]
             self.mesh._elements["element"] = self.mesh._elements["element"].astype(str)
-            self.mesh._num_elements = self.mesh._elements.shape[0]
             self.mesh.elemlist = {k: self.mesh._elements[self.mesh._elements["type"] == k]["element"].values for k in elemtypes}
 
         # sections
@@ -546,16 +537,26 @@ class OfemStruct:
             # Write each DataFrame to a different sheet
             self.mesh._points.to_excel(writer, sheet_name='points', index=False)
             self.mesh._elements.to_excel(writer, sheet_name='elements', index=False)
-            self._sections.to_excel(writer, sheet_name='sections', index=False)
-            self._elemsections.to_excel(writer, sheet_name='elementsections', index=False)
-            self._supports.to_excel(writer, sheet_name='supports', index=False)
-            self._materials.to_excel(writer, sheet_name='materials', index=False)
-            self._pointloads.to_excel(writer, sheet_name='pointloads', index=False)
-            self._lineloads.to_excel(writer, sheet_name='lineloads', index=False)
-            self._arealoads.to_excel(writer, sheet_name='arealoads', index=False)
-            self._solidloads.to_excel(writer, sheet_name='solidloads', index=False)
-            self._loadcases.to_excel(writer, sheet_name='loadcases', index=False)
-            self._loadcombinations.to_excel(writer, sheet_name='loadcombinations', index=False)            
+            if not self._sections.empty:
+                self._sections.to_excel(writer, sheet_name='sections', index=False)
+            if not self._elemsections.empty:
+                self._elemsections.to_excel(writer, sheet_name='elementsections', index=False)
+            if not self._materials.empty:
+                self._materials.to_excel(writer, sheet_name='materials', index=False)
+            if not self._supports.empty:
+                self._supports.to_excel(writer, sheet_name='supports', index=False)
+            if not self._loadcases.empty:
+                self._loadcases.to_excel(writer, sheet_name='loadcases', index=False)
+            if not self._loadcombinations.empty:
+                self._loadcombinations.to_excel(writer, sheet_name='loadcombinations', index=False)
+            if not self._pointloads.empty:
+                self._pointloads.to_excel(writer, sheet_name='pointloads', index=False)
+            if not self._lineloads.empty:
+                self._lineloads.to_excel(writer, sheet_name='lineloads', index=False)
+            if not self._arealoads.empty:
+                self._arealoads.to_excel(writer, sheet_name='arealoads', index=False)
+            if not self._solidloads.empty:
+                self._solidloads.to_excel(writer, sheet_name='solidloads', index=False)
         return
 
     def write_xfem(self, filename: str):
@@ -832,6 +833,52 @@ class OfemStruct:
     def load_combinations(self, loadcombinations):
         self._loadcombinations = loadcombinations
         self._dirty[LOADCOMBINATIONS] = True
+    
+    def get_combos(self):
+        combos = {k: {"type": "", "coefs": {}} for k in self._loadcombinations['combo'].unique().tolist()}
+        for k in combos.keys():
+            for combo in self._loadcombinations[self._loadcombinations['combo'] == k].itertuples():
+                if combo.type is not None:
+                    combos[k]["type"] = combo.type
+                combos[k]["coefs"][combo.case] = combo.coef
+            # combo = self._loadcombinations[self._loadcombinations['combination'] == k]
+            # combos[k] = {k: v for k, v in zip(combo['loadcase'], combo['coef'])}          
+        return combos
+    
+    def get_cases(self):
+        ### falta implementar a direção
+
+        cases = {
+            k: {"index": 0, "type": "dead", "point": {}, "line": {}, "area": {}, 
+                "temp": {}, "grav": {}, "displ": {}} 
+            for k in self._loadcases['case'].unique().tolist()}
+
+        for i, k in enumerate(cases.keys()):
+            case = self._loadcases[self._loadcases['case'] == k].iloc[0]
+            cases[k]["type"] = case.type
+            cases[k]["index"] = i + 1
+            # go through gravity loads
+            cases[k]["grav"] = -case.gravity if case.gravity is not None else 0
+            # go through point loads
+            if not self._pointloads.empty:
+                for load in self._pointloads[self._pointloads['loadcase'] == k].itertuples():
+                    if not load.point in cases[k]["point"]:
+                        cases[k]["point"][load.point] = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+                    cases[k]["point"][load.point] += np.array([load.fx, load.fy, load.fz, load.mx, load.my, load.mz])
+            # go through line loads
+            if not self._lineloads.empty:
+                for load in self._lineloads[self._lineloads['loadcase'] == k].itertuples():
+                    if not load.element in cases[k]["line"]:
+                        cases[k]["line"][load.element] = np.array([0.0, 0.0, 0.0, 0.0])
+                    cases[k]["line"][load.element] += np.array([load.fx, load.fy, load.fz, load.mx])
+            # go through area loads
+            if not self._arealoads.empty:
+                for load in self._arealoads[self._arealoads['loadcase'] == k].itertuples():
+                    if not load.element in cases[k]["area"]:
+                        cases[k]["area"][load.element] = np.array([0.0, 0.0, 0.0])
+                    cases[k]["area"][load.element] += np.array([load.px, load.py, load.pz])
+
+        return cases
 
     @property
     def num_materials(self):
