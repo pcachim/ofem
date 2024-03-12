@@ -70,7 +70,7 @@ def read_line(s: str, s0, cont: bool=False) -> dict:
     
     if (s[len(s)-1] == '_'):
         variables['type'] = "cont"
-        variables['previous'] = t.strip()[0:len(t)-2] + ' '
+        variables['previous'] = t.strip()[:-2] + ' '
         return variables
 
 # teste 
@@ -221,7 +221,7 @@ def get_area_loads(arealoads):
     for load in arealoads.itertuples():  
         coordsys = load.CoordSys
         direction = load.Dir
-        value = load.UnifLoad
+        value = float(load.UnifLoad)
         ofemloads['element'].append(load.Area)
         ofemloads['loadcase'].append(load.LoadPat)
         ofemloads['direction'].append(coordsys.lower())
@@ -260,7 +260,7 @@ def get_line_loads(lineloads):
     for load in lineloads.itertuples():  
         coordsys = load.CoordSys
         direction = load.Dir
-        value = load.FOverLA
+        value = float(load.FOverLA)
         ftype = load.Type
         ofemloads['element'].append(load.Frame)
         ofemloads['loadcase'].append(load.LoadPat)
@@ -960,6 +960,7 @@ class Sap2000Handler:
         # JOINTS
         df = joints.rename(columns={"Joint": "point", "XorR": "x", "Y": "y", "Z": "z"})
         df.loc[:, 'point'] = df.loc[:, 'point'].astype(str)
+        df.loc[:, ['x', 'y', 'z']] = df.loc[:, ['x', 'y', 'z']].astype(float)
         self.ofem.points = pd.concat([self.ofem.points, df[['point', 'x', 'y', 'z']]])
 
         # ELEMENTS - FRAMES
@@ -982,6 +983,9 @@ class Sap2000Handler:
             "TorsConst": "torsion"})
         df.loc[:, "type"] = "line"
         df.loc[:, "angle"] = 0.0
+        df.loc[:,["section", "material"]] = df.loc[:,["section", "material"]].astype(str)
+        df.loc[:,["area", "inertia3", "inertia2", "torsion", "angle"]] = df.loc[:,
+                ["area", "inertia3", "inertia2", "torsion", "angle"]].astype(float)
         df.loc[:, "design"] = "none"
 
         self.ofem.sections = pd.concat([self.ofem.sections, 
@@ -992,6 +996,7 @@ class Sap2000Handler:
         df = areas.rename(columns={"Area": "element", "Joint1": "node1", "Joint2": "node2", 
                                         "Joint3": "node3", "Joint4": "node4"})
         df['element'] = df['element'].astype(str)
+        df.loc[:, 'NumJoints'] = df.loc[:, 'NumJoints'].astype(int)
         df[['node1', 'node2', 'node3', 'node4']] = df[['node1', 'node2', 'node3', 'node4']].astype(str) 
 
         df3 = df[df['NumJoints'] == 3].copy()
@@ -1035,6 +1040,8 @@ class Sap2000Handler:
             "UnitMass": "mass", "UnitWeight": "weight", "A1": "alpha"})
         df.loc[:, 'damping'] = 0.02
         df.loc[:, 'type'] = "isotropic"
+        df.loc[:, ['young', 'poisson', 'mass', 'shear', 'damping', 'alpha', 'weight']] = df.loc[:, 
+                ['young', 'poisson', 'mass', 'shear', 'damping', 'alpha', 'weight']].astype(float)
         self.ofem.materials = pd.concat([self.ofem.materials, 
             df[['material', 'type', 'young', 'poisson', 'mass', 'shear', 'damping', 'alpha', 'weight']]])
 
@@ -1056,6 +1063,7 @@ class Sap2000Handler:
         if 'Load Pattern Definitions'.upper() in self.s2k:
             df = self.s2k['Load Pattern Definitions'.upper()]
             df = df.rename(columns={"LoadPat": "case", "DesignType": "type", "SelfWtMult": "gravity"})
+            df.loc[:,'gravity'] = df.loc[:,'gravity'].astype(float)
             self.ofem.load_cases = pd.concat([self.ofem.load_cases, df[["case", "type", "gravity"]]])
 
         # LOAD COMBINATIONS
@@ -1063,6 +1071,7 @@ class Sap2000Handler:
             df = self.s2k['Combination Definitions'.upper()]
             df = df.rename(columns={"ComboName": "combo", "ComboType": "type", "CaseName": "case", "ScaleFactor": "coef"})
             df.loc[:,['type']] = df.loc[:,['type']].apply(lambda x: x.replace('Linear Add', 'add').replace('Envelope', 'envelope'))
+            df.loc[:,['coef']] = df.loc[:,['coef']].astype(float)
             self.ofem.load_combinations = pd.concat([self.ofem.load_combinations, df[["combo", "type", "case", "coef"]]])
 
         # POINT LOADS

@@ -271,6 +271,7 @@ class Handler:
                 count = 1
                 for elem, values in cases[case]["area"].items():
                     file.write("# iface  loelf\n")
+                    # lixo = struct.elements['element'].tolist()
                     file.write(" %6d %6d\n" % (count, struct.elements.at[str(elem), 'id']))
                     file.write("# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1\n")      
                     etype = struct.elements.loc[elem].type

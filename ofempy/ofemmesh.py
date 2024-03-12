@@ -5,7 +5,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 import meshio, gmsh
-import sys, io, json, zipfile, re
+import sys, os, io, json, zipfile, re
 
 # pd.options.mode.copy_on_write = True
 elemtypes = list(common.ofem_meshio.keys())
@@ -23,6 +23,27 @@ SOLIDLOADS = 7
 LOADCASES = 8
 LOADCOMBINATIONS = 9
 
+def replace_bytesio_in_zip(zip_path, target_filename, new_contents):
+    # Create a temporary filename for the new ZIP file
+    temp_zip_path = zip_path + ".temp"
+
+    # Open the existing ZIP file in read mode
+    with zipfile.ZipFile(zip_path, 'r') as existing_zip:
+        # Open the new ZIP file in write mode
+        with zipfile.ZipFile(temp_zip_path, 'w') as new_zip:
+            # Iterate through the existing files
+            for item in existing_zip.infolist():
+                # Skip the target file
+                if item.filename != target_filename:
+                    # Copy the existing file to the new ZIP file
+                    data = existing_zip.read(item.filename)
+                    new_zip.writestr(item, data)
+
+            # Add the new file to the ZIP file
+            new_zip.writestr(target_filename, new_contents)
+
+    # Replace the original ZIP file with the temporary one
+    os.replace(temp_zip_path, zip_path)
 
 class OfemMesh:
     
@@ -169,8 +190,13 @@ class OfemMesh:
 
         json_buffer = io.BytesIO(json_data.encode('utf-8'))
         json_buffer.seek(0)
-        with zipfile.ZipFile(filename, 'a') as zip_file:
-            zip_file.writestr('mesh.json', json_buffer.read().decode('utf-8'))        
+        
+        if path.exists():
+            replace_bytesio_in_zip(filename, 'mesh.json', json_buffer.read().decode('utf-8'))   
+        else:
+            with zipfile.ZipFile(filename, 'w') as zip_file:
+                zip_file.writestr('mesh.json', json_buffer.read().decode('utf-8')) 
+
         return
 
     def write_gmsh(self, filename: str):
@@ -565,6 +591,7 @@ class OfemStruct:
             filename = path.with_suffix(".xfem")
 
         self.mesh.write_xfem(filename)
+
         files = self.to_dict()
         json_data = json.dumps(files, indent=2).replace('NaN', 'null')
         # with open(filename+'.json', 'w') as f:
@@ -575,8 +602,12 @@ class OfemStruct:
         # Reset buffer position to the beginning
         json_buffer.seek(0)
         # Create a ZIP file in-memory and add the JSON buffer
-        with zipfile.ZipFile(filename, 'a') as zip_file:
-            zip_file.writestr('struct.json', json_buffer.read().decode('utf-8'))        
+        if path.exists():
+            replace_bytesio_in_zip(filename, 'struct.json', json_buffer.read().decode('utf-8'))
+        else:
+            with zipfile.ZipFile(filename, 'w') as zip_file:
+                zip_file.writestr('struct.json', json_buffer.read().decode('utf-8'))    
+            
         return
     
     def save(self, filename: str, file_format: str = None):
