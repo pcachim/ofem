@@ -1,14 +1,35 @@
-import pathlib
+import pathlib, logging, timeit
+import sys
+import numpy as np
+import pandas as pd
+pd.set_option('mode.copy_on_write', True)
 #import eurocodepy as ec
 from . import ofemsolver
 from . import ofemmesh
 from .common import *
+import gmsh
+
+
+def run_gmsh(s):
+    
+    gmsh.initialize(sys.argv)
+
+    gmsh.option.setNumber("Mesh.Lines", 1)
+    gmsh.option.setNumber("Mesh.SurfaceFaces", 1)
+    gmsh.option.setNumber("Mesh.LineWidth", 5)
+    gmsh.option.setNumber("Mesh.ColorCarousel", gmsh_colors['physical'])
+
+    gmsh.open(s)
+    if '-nopopup' not in sys.argv:
+        gmsh.fltk.run()
+
+    gmsh.finalize()
 
 class Handler:
 
     @staticmethod
     def to_ofempy(struct: ofemmesh.OfemStruct, mesh_file: str):
-        """Writes a femix .gldat mesh file
+        """Writes a ofem file
 
         Args:
             mesh_file (str): the name of the file to be written
@@ -345,5 +366,221 @@ class Handler:
         return
 
     @staticmethod
-    def to_gmsh(struct: ofemmesh.OfemStruct, mesh_file: str):
-        pass
+    def to_gmsh(struct: ofemmesh.OfemStruct, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
+        """Writes a GMSH mesh file and opens it in GMSH
+
+        Args:
+            filename (str): the name of the file to be written
+        """
+        path = pathlib.Path(mesh_file)
+        filename = str(path.parent / (path.stem + ".msh"))
+
+        # process options
+        if model not in ['geometry', 'loads']:
+            raise ValueError('model must be "geometry" or "loads"')
+
+        if entities not in ['types', 'sections', 'materials']:
+            raise ValueError('entities must be "types", "sections" or "materials"')
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        modelname = pathlib.Path(filename).stem + ' - ' + struct.title
+        gmsh.model.add(modelname)
+        gmsh.model.setFileName(filename)
+
+        struct.set_indexes()
+        struct.mesh.set_points_elems_id(1)
+
+        joints = struct.mesh.points
+        frames = struct.mesh.elements.loc[struct.mesh.elements['type'].isin(['line2'])].copy()
+        frames.loc[:,'node1'] = joints.loc[frames['node1'].values, 'id'].values
+        frames.loc[:,'node2'] = joints.loc[frames['node2'].values, 'id'].values
+        frames.loc[:,'nodes'] = frames[['node1', 'node2']].values.tolist()
+        frames.loc[:,'section'] = struct.element_sections.loc[:,'element'].apply(
+            lambda x: struct.element_sections.at[x, 'section']
+            )
+        frames.loc[:,'material'] = frames.loc[:,'section'].apply(
+            lambda x: struct.sections.at[x, 'material']
+            )
+        framesections = frames['section'].unique()
+        framematerials = frames['material'].unique()
+        areas = struct.mesh.elements.loc[struct.mesh.elements['type'].isin(['area3', 'area4'])].copy()
+        areas.loc[:,'section'] = struct.element_sections.loc[:,'element'].apply(
+            lambda x: struct.element_sections.at[x, 'section']
+            )
+        areas.loc[:,'material'] = areas.loc[:,'section'].apply(
+            lambda x: struct.sections.at[x, 'material']
+            )
+        areasections = areas['section'].unique()
+        areamaterials = areas['material'].unique()
+
+        logging.basicConfig(level=logging.DEBUG)
+        logging.info("Writing GMSH file: %s", filename)
+
+        # JOINTS
+        njoins = struct.mesh.num_points
+        logging.debug(f"Processing nodes ({njoins})...")
+        ijoins = struct.mesh.points['id'].values
+
+        joints['coord'] = joints[['x', 'y', 'z']].values.tolist()
+        ient = gmsh.model.addDiscreteEntity(POINT)
+        gmsh.model.setEntityName(CURVE, ient, 'nodes')
+        gmsh.model.mesh.addNodes(POINT, ient, ijoins, joints['coord'].explode().to_list())
+
+        # ELEMENTS - FRAMES
+        logging.info(f"Processing frames ({struct.mesh.num_elements})...")
+
+        if entities == 'sections':
+            for sec in framesections:
+                framesl = pd.DataFrame(frames.loc[frames['section']==sec])
+                line = gmsh.model.addDiscreteEntity(CURVE)
+                gmsh.model.setEntityName(CURVE, line, sec)
+                lst = framesl['id'].to_list()
+                gmsh.model.mesh.addElementsByType(line, ofem_gmsh['line2'], lst, framesl['nodes'].explode().to_list())
+
+                gmsh.model.addPhysicalGroup(CURVE, [line], name="section: " + sec)
+
+        elif entities == 'materials':
+            for mat in framematerials:
+                framesl = frames.loc[frames['material']==mat].copy()
+                line = gmsh.model.addDiscreteEntity(CURVE)
+                gmsh.model.setEntityName(CURVE, line, mat)
+                lst = framesl['id'].to_list()
+                gmsh.model.mesh.addElementsByType(line, ofem_gmsh['line2'], lst, framesl['nodes'].explode().to_list())
+
+                gmsh.model.addPhysicalGroup(CURVE, [line], name="frame: " + mat)
+
+        elif entities == 'types':
+            line = gmsh.model.addDiscreteEntity(CURVE)
+            gmsh.model.setEntityName(CURVE, line, 'Line2')
+            gmsh.model.mesh.addElementsByType(line, ofem_gmsh['line2'], frames['id'].to_list(), frames['nodes'].explode().to_list())
+        else:
+            raise ValueError('entities must be "types", "sections" or "elements"')
+
+        # ELEMENTS - AREAS
+        starttime = timeit.default_timer()
+        logging.info(f"Processing areas ({struct.mesh.num_elements})...")
+        areas['node1'] = joints.loc[areas['node1'].values, 'id'].values
+        areas['node2'] = joints.loc[areas['node2'].values, 'id'].values
+        areas['node3'] = joints.loc[areas['node3'].values, 'id'].values
+        areas['node4'] = areas.apply(lambda row: 'nan' if row['node4'] == 'nan' else joints.at[row['node4'], 'id'], axis=1)
+
+        logging.debug(f"Execution time: {round((timeit.default_timer() - starttime)*1000,3)} ms")
+        if entities == 'sections':
+            for sec in areasections:
+                areasl = areas.loc[areas['section']==sec].copy()
+                surf = gmsh.model.addDiscreteEntity(SURFACE)
+                gmsh.model.setEntityName(SURFACE, surf, sec)
+
+                areas3 = areasl.loc[areasl['type'] == 'area3'].copy()
+                areas3['nodes'] = areas3[['node1', 'node2', 'node3']].values.tolist()
+                gmsh.model.mesh.addElementsByType(surf, ofem_gmsh['area3'], areas3['id'].to_list(), 
+                        areas3['nodes'].explode().to_list())
+
+                areas3 = areasl.loc[areasl['type'] == 'area4'].copy()
+                areas3['nodes'] = areas3[['node1', 'node2', 'node3', 'node4']].values.tolist()
+                gmsh.model.mesh.addElementsByType(surf, ofem_gmsh['area4'], areas3['id'].to_list(), 
+                        areas3['nodes'].explode().to_list())
+
+                gmsh.model.addPhysicalGroup(SURFACE, [surf], name="section: " + sec)
+
+        elif entities == 'materials':
+
+            for mat in areamaterials:
+                areasl = areas.loc[areas['material']==mat].copy()
+                surf = gmsh.model.addDiscreteEntity(SURFACE)
+                gmsh.model.setEntityName(SURFACE, surf, mat)
+
+                areas3 = areasl.loc[areasl['type'] == 'area3'].copy()
+                areas3['nodes'] = areas3[['node1', 'node2', 'node3']].values.tolist()
+                gmsh.model.mesh.addElementsByType(surf, ofem_gmsh['area3'], areas3['id'].to_list(), 
+                        areas3['nodes'].explode().to_list())
+
+                areas3 = areasl.loc[areasl['type'] == 'area4'].copy()
+                areas3['nodes'] = areas3[['node1', 'node2', 'node3', 'node4']].values.tolist()
+                gmsh.model.mesh.addElementsByType(surf, ofem_gmsh['area4'], areas3['id'].to_list(), 
+                        areas3['nodes'].explode().to_list())
+
+                gmsh.model.addPhysicalGroup(SURFACE, [surf], name="area: " + mat)
+
+        elif entities == 'types':
+            areas3 = areas.loc[areas['type'] == 'area3'].copy()
+            if not areas3.empty:
+                areas3['nodes'] = areas3[['node1', 'node2', 'node3']].values.tolist()
+                surf = gmsh.model.addDiscreteEntity(SURFACE)
+                gmsh.model.setEntityName(SURFACE, surf, 'Triangle3')
+                gmsh.model.mesh.addElementsByType(surf, ofem_gmsh['area3'], areas3['id'].to_list(), 
+                        areas3['nodes'].explode().to_list())
+
+            areas3 = areas.loc[areas['type'] == 'area4'].copy()
+            if not areas3.empty:
+                areas3['nodes'] = areas3.loc[:,['node1', 'node2', 'node3', 'node4']].values.tolist()
+                surf = gmsh.model.addDiscreteEntity(SURFACE)
+                gmsh.model.setEntityName(SURFACE, surf, 'Quadrangle4')
+                gmsh.model.mesh.addElementsByType(surf, ofem_gmsh['area4'], areas3['id'].to_list(), 
+                        areas3['nodes'].explode().to_list())
+        else:
+            raise ValueError('entities must be "types", "sections" or "elements"')
+
+        # PHYSICALS
+        # if physicals == 'sections':
+        #     for sec in framesections:
+        #         lst = frames.loc[frames['section']==sec]['id'].values
+        #         gmsh.model.addPhysicalGroup(CURVE, lst, name="section: " + sec)
+
+        #     for sec in areasections:
+        #         lst = areas.loc[areas['section']==sec]['id'].values
+        #         gmsh.model.addPhysicalGroup(SURFACE, lst, name="section: " + sec)
+        # elif physicals == 'materials':
+        #     for sec in framematerials:
+        #         lst = frames.loc[frames['material']==sec]['id'].values
+        #         gmsh.model.addPhysicalGroup(CURVE, lst, name="material: " + sec)
+
+        #     for sec in areamaterials:
+        #         lst = areas.loc[areas['material']==sec]['id'].values
+        #         gmsh.model.addPhysicalGroup(SURFACE, lst, name="material: " + sec)
+        # else:
+        #     raise ValueError('physicals must be "sections" or "materials"')
+
+        if False:
+            logging.debug("Processing FEM mesh...")
+            gmsh.model.add("FEM mesh")
+            # prepares the GMSH model
+            njoins = coordsauto.shape[0]
+            logging.info(f"Processing nodes ({njoins})...")
+#            coordsauto.insert(0, "JoinTag", np.arange(1, njoins+1), False)
+#            coordsauto['Joint'] = coordsauto['Joint'].astype(str)
+#            coordsauto['Joint2'] = coordsauto.loc[:, 'Joint']
+#            coordsauto.set_index('Joint', inplace=True)
+#            coordsauto['coord'] = coordsauto.apply(lambda x: np.array([x['XorR'], x['Y'], x['Z']]),axis=1) 
+#            lst1 = coordsauto['coord'].explode().to_list()
+            point = gmsh.model.addDiscreteEntity(POINT)
+            gmsh.model.mesh.addNodes(POINT, point, ijoins, lst1)
+
+        logging.debug("Processing GMSH intialization...")
+
+        gmsh.model.setAttribute("supports", struct.supports['point'].values.tolist())
+        data_list = struct.supports.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        gmsh.model.setAttribute("supports", data_list)
+        data_list = struct.sections.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        gmsh.model.setAttribute("sections", data_list)
+        data_list = struct.materials.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        gmsh.model.setAttribute("materials", data_list)
+
+        gmsh.option.setNumber("Mesh.SaveAll", 1)
+
+        size = gmsh.model.getBoundingBox(-1, -1)
+
+        gmsh.write(filename)
+
+        # # Launch the GUI to see the results:
+        # if '-nopopup' not in sys.argv:
+        #     gmsh.fltk.run()
+
+        gmsh.finalize()
+
+        run_gmsh(filename)
+
+
+        return

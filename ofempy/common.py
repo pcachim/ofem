@@ -19,6 +19,13 @@ ROTATION = 1001
 HOR_ROT = 1101
 VER_ROT = 1011
 
+# gmsh color codes
+gmsh_colors = {
+    "entity": 1,
+    "physical": 2,
+    "type": 0
+}
+
 ofem_meshio = {
     "point": "vertex",
     "line2": "line",
