@@ -896,82 +896,83 @@ class OfemStruct:
     def num_load_cases(self):
         return self._loadcases.shape[0]
 
-# class OfemData:
-#     _point_data: pd.DataFrame = pd.DataFrame(
-#         columns = ['point', 'tag', 'type', 'valint', 'valfloat', 'valstr', 'v1', 'v2', 'v3'])
-#     _element_data: pd.DataFrame = pd.DataFrame(
-#         columns = ['element', 'tag', 'type', 'valint', 'valfloat', 'valstr'])
-#     _element_node_data = pd.DataFrame = pd.DataFrame(
-#         columns = ['element', 'tag', 'type', 'valint', 'valfloat', 'valstr',
-#                     'node1', 'node2'])
+class OfemData:
+    def __init__(self) -> None:
+        self._point_data = pd.DataFrame(
+            columns = ['point', 'tag', 'type', 'valint', 'valfloat', 'valstr', 'v1', 'v2', 'v3'])
+        self._element_data = pd.DataFrame(
+            columns = ['element', 'tag', 'type', 'valint', 'valfloat', 'valstr'])
+        self._element_node_data = pd.DataFrame(
+            columns = ['element', 'tag', 'type', 'valint', 'valfloat', 'valstr',
+                        'node1', 'node2'])
 
-#     def read_xfem(self, filename: str): 
-#         path = Path(filename)
-#         if path.suffix != ".xfem":
-#             raise ValueError(f"File {filename} is not a .xfem file")
+    def read_xfem(self, filename: str): 
+        path = Path(filename)
+        if path.suffix != ".xfem":
+            raise ValueError(f"File {filename} is not a .xfem file")
 
-#         with zipfile.ZipFile(filename, 'r') as zip_file:
-#             with zip_file.open('data.json') as json_file:
-#                 data = json.load(json_file)
-#                 self.from_dict(data)
+        with zipfile.ZipFile(filename, 'r') as zip_file:
+            with zip_file.open('data.json') as json_file:
+                data = json.load(json_file)
+                self.from_dict(data)
 
-#         self._dirty = [True for i in range(NTABLES)]
-#         return
+        self._dirty = [True for i in range(NTABLES)]
+        return
 
-#     def read(self, filename: str, file_format: str = None):
-#         if file_format == None:
-#             file_format = Path(filename).suffix
+    def read(self, filename: str, file_format: str = None):
+        if file_format == None:
+            file_format = Path(filename).suffix
 
-#         if file_format == ".xlsx":
-#             self.read_excel(filename)
-#         elif file_format == ".xfem":
-#             self.read_xfem(filename)
-#         else:
-#             raise ValueError(f"File format {file_format} not recognized")
-#         return
+        if file_format == ".xlsx":
+            self.read_excel(filename)
+        elif file_format == ".xfem":
+            self.read_xfem(filename)
+        else:
+            raise ValueError(f"File format {file_format} not recognized")
+        return
 
-#     def to_dict(self):
-#         return {
-#             "point_data": self._point_data.to_dict(orient="records"), 
-#             "element_data": self._element_data.to_dict(orient="records"), 
-#             "element_node_data": self._element_node_data.to_dict(orient="records"),
-#         }
+    def to_dict(self):
+        return {
+            "point_data": self._point_data.to_dict(orient="records"), 
+            "element_data": self._element_data.to_dict(orient="records"), 
+            "element_node_data": self._element_node_data.to_dict(orient="records"),
+        }
 
-#     def from_dict(self, ofem_dict: dict):
-#         json_buffer = io.BytesIO(json.dumps(ofem_dict["point_data"]).encode())
-#         json_buffer.seek(0)
-#         self.mesh._points = pd.read_json(json_buffer, orient='records')
-#         json_buffer = io.BytesIO(json.dumps(ofem_dict["element_data"]).encode())
-#         json_buffer.seek(0)
-#         self.mesh._elements = pd.read_json(json_buffer, orient='records')
-#         json_buffer = io.BytesIO(json.dumps(ofem_dict["element_node_data"]).encode())
-#         json_buffer.seek(0)
-#         self._sections = pd.read_json(json_buffer, orient='records')
-#         return
+    def from_dict(self, ofem_dict: dict):
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["point_data"]).encode())
+        json_buffer.seek(0)
+        self.mesh._points = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["element_data"]).encode())
+        json_buffer.seek(0)
+        self.mesh._elements = pd.read_json(json_buffer, orient='records')
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["element_node_data"]).encode())
+        json_buffer.seek(0)
+        self._sections = pd.read_json(json_buffer, orient='records')
+        return
 
-#     @property
-#     def point_data(self):
-#         return self._point_data
-    
-#     @point_data.setter
-#     def point_data(self, pointdata):
-#         self._point_data = pd.concat(self._point_data, pointdata)
-#         return
-    
-#     @property
-#     def element_data(self):
-#         return self._point_data
-    
-#     @element_data.setter
-#     def element_data(self, elementdata):
-#         self._element_data = pd.concat(self._element_data, elementdata)
-#         return
-    
-#     @property
-#     def element_node_data(self):
-#         return self._point_data
-    
-#     @element_node_data.setter
-#     def element_node_data(self, elementnodedata):
-#         self._element_node_data = pd.concat(self._element_node_data, elementnodedata)
-#         return
+    @property
+    def point_data(self):
+        return self._point_data
+
+    @point_data.setter
+    def point_data(self, pointdata):
+        self._point_data = pd.concat(self._point_data, pointdata)
+        return
+
+    @property
+    def element_data(self):
+        return self._point_data
+
+    @element_data.setter
+    def element_data(self, elementdata):
+        self._element_data = pd.concat(self._element_data, elementdata)
+        return
+
+    @property
+    def element_node_data(self):
+        return self._point_data
+
+    @element_node_data.setter
+    def element_node_data(self, elementnodedata):
+        self._element_node_data = pd.concat(self._element_node_data, elementnodedata)
+        return

@@ -141,7 +141,7 @@ def getElementSolid(model: gmsh.model, types: list=[4, 7, 6, 5, 11, 14, 13, 17, 
     return lnods
 
 
-class msh_handler:
+class GmshHandler:
     def __init__(self):
         if not gmsh.isInitialized():
             gmsh.initialize()
