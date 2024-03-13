@@ -28,7 +28,7 @@
 ############################################################################
 
 import sys, os, meshio, getopt
-import ofemmesh
+import ofempy.xfemmesh as xfemmesh
 
 class PyFEMHandler:
     def __init__(self):
@@ -150,7 +150,7 @@ def checkRank( mesh ):
             
     return rank
 
-def checkRankStruct( struct: ofemmesh.OfemStruct ):
+def checkRankStruct( struct: xfemmesh.xfemStruct ):
     rank = 2
 
     mask = struct.elements['col1'].str[:len('area')] == 'area'
@@ -283,7 +283,7 @@ class PyFEMHandler:
     def __init__(self):
         pass
     
-    def write_dat(self, struct: ofemmesh.OfemStruct, filename: str):
+    def write_dat(self, struct: xfemmesh.xfemStruct, filename: str):
         of = open(filename[:-4] + '.dat', "w")
         self.printNodes(of, mesh)
         self.printElements(of, mesh)

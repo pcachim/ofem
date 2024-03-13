@@ -6,7 +6,7 @@ import gmsh
 import numpy as np
 import pathlib
 #import eurocodepy as ec
-from . import libofempy
+from .ofem import libofempy
 from .common import *
 from . import gmshhandler
 
@@ -536,7 +536,7 @@ class Slab:
 
         ofem_file.add(mesh_file)
         ofem_file.add(combo_file)
-        txt = libofempy.solver(jobname)
+        txt = libofempy.solve(jobname)
 
         options = {'csryn': 'n', 'ksres': 2, 'lcaco': 'c'}
         # codes = [ofemlib.DI_CSV, ofemlib.AST_CSV, ofemlib.EST_CSV, ofemlib.RS_CSV]
@@ -848,7 +848,7 @@ class Beam:
             file.write("\n")
 
         jobname = str(path.parent / path.stem)
-        libofempy.solver(jobname)
+        libofempy.solve(jobname)
 
         options = {'csryn': 'n', 'ksres': 2}
         codes = [libofempy.DI_CSV, libofempy.AST_CSV, libofempy.EST_CSV, libofempy.RS_CSV]

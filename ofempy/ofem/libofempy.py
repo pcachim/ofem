@@ -29,6 +29,36 @@ AST_CSV = 15 # /*   15) _avgst.csv file with the stresses in the nodes.         
 EST_CSV = 16 # /*   16) _elnst.csv file with the stresses in the nodes.             */
 DI_CSV  = 17 # /*   17) _di.csv file with the displacements in the nodes.           */
 
+GST_CSV = 101 # /*      _gpstr.csv file with the principal stresses in the nodes.   */
+RE_CSV  = 102 # /*      _react.csv file with the reactions.                         */
+FF_CSV  = 103 # /*      _fixfo.csv file with the fixed forces                       */
+
+class OutputOptions:
+    @staticmethod
+    def displaements():
+        return [DI_CSV]
+    
+    @staticmethod
+    def stresses():
+        return [AST_CSV, EST_CSV]
+    
+    @staticmethod
+    def averagestresses():
+        return [AST_CSV]
+
+    @staticmethod
+    def nodalstresses():
+        return [EST_CSV]
+    
+    @staticmethod
+    def results():
+        return [RS_CSV]
+
+    @staticmethod
+    def all():
+        return [RS_LPT, RS_CSV, AST_CSV, EST_CSV, DI_CSV]
+    
+
 BOTO_XX = 1
 BOTO_YY = 2
 BOTO_XXENV = 3
@@ -45,6 +75,7 @@ SURF_MIDDLE = 2
 SURF_TOP = 3
 
 
+DEBUG = False
 captured_stdout = ''
 stdout_pipe = os.pipe()
 
@@ -84,20 +115,12 @@ ofemfilessuffix = ['.gldat', '.cmdat', '.log', '.nldat', '.srdat',
                 '_gl.bin', '_re.bin', '_di.bin', '_sd.bin', '_st.bin', 
                 '_nl.bin', '_sn.bin', '_ff.bin', '_st.bin',
                 '_di.csv', '_avgst.csv', '_elnst.csv', 
-                '_gpstr.csv', '_react.csv', '_fixfo.csv', '_csv.info']
+                '_gpstr.csv', '_react.csv', '_fixfo.csv', '_csv.info', '.out']
 
 class OfemOptions:
-    lcaco: str = 'l'
-    cstyn: str = 'y'
-    stnod: str = 'a'
-    csryn: str = 'n'
-    ksres: int = 1
-    kstre: int = 1
-    kdisp: int = 1
-
     def __init__(
             self, lcaco: str='l', cstyn: str='y', stnod: str='a', csryn: str='n', 
-            ksres: int=1, kstre: int=1, kdisp: int=1):
+            ksres: int=2, kstre: int=1, kdisp: int=1):
         self.lcaco = lcaco
         self.cstyn = cstyn
         self.stnod = stnod
@@ -112,6 +135,11 @@ class OfemOptions:
     def __repr__(self):
         return f"OfemOptions(lcaco: {self.lcaco}, cstyn: {self.cstyn}, stnod: {self.stnod}, csryn: {self.csryn}, ksres: {self.ksres}, kstre: {self.kstre}, kdisp: {self.kdisp})"
 
+    def get(self) -> dict:
+        return {
+            'lcaco': self.lcaco, 'cstyn': self.cstyn, 'stnod': self.stnod, 'csryn': self.csryn,
+            'ksres': self.ksres, 'kstre': self.kstre, 'kdisp': self.kdisp
+        }
 
 class OfemSolverFile:
     def __init__(self, filename: str, overwrite: bool=False):
@@ -275,14 +303,22 @@ def get_csv_from_ofem(filename: str, code: int) -> pd.DataFrame:
         pd.DataFrame: _description_
     """
 
-    path = pathlib.Path(filename + '.ofem')
+    path = pathlib.Path(filename)
     if code == DI_CSV:
         file_to_extract = pathlib.Path(filename + '_di.csv')
     elif code == EST_CSV:
         file_to_extract = pathlib.Path(filename + '_elnst.csv')
     elif code == AST_CSV:
         file_to_extract = pathlib.Path(filename + '_avgst.csv')
-        
+    elif code == GST_CSV:
+        file_to_extract = pathlib.Path(filename + '_gpstr.csv')
+    elif code == RE_CSV:
+        file_to_extract = pathlib.Path(filename + '_react.csv')
+    elif code == FF_CSV:
+        file_to_extract = pathlib.Path(filename + '_fixfo.csv')
+    else:
+        return None
+
     with zipfile.ZipFile(filename + '.ofem', 'r') as ofemfile:
         with ofemfile.open(file_to_extract.name) as file:
             df = pd.read_csv(file, sep=';')
@@ -471,8 +507,7 @@ def results(filename:str, codes: list, **kwargs):
 
     ncode = len(codes)
 
-    capture_output = False
-    if capture_output:
+    if not DEBUG:
         global stdout_pipe
         global captured_stdout 
         captured_stdout = ''
@@ -493,7 +528,7 @@ def results(filename:str, codes: list, **kwargs):
                     stnod.encode(), csryn.encode(), 
                     c_int(ksres), c_int(kstre), c_int(kdisp))
 
-    if capture_output:
+    if not DEBUG:
         # Close the write end of the pipe to unblock the reader thread and trigger it to exit
         os.close(stdout_fileno)
         t.join()
@@ -513,7 +548,7 @@ def results(filename:str, codes: list, **kwargs):
     return captured_stdout
 
 
-def solver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
+def solve(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
     """Reads the input file and solves the system of linear equations
 
     Args:
@@ -541,36 +576,38 @@ def solver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
         randsn = 1.0e-6
         print("\n'randsn' must be > 0. 'randsn' changed to 1.0e-6")
 
-    # Redirect stdout to a StringIO object
-    # Create pipe and dup2() the write end of it on top of stdout, saving a copy of the old stdout
-    global stdout_pipe
-    global captured_stdout
-    captured_stdout = ''
-    stdout_pipe = os.pipe()
-    stdout_fileno = sys.stdout.fileno()
-    stdout_save = os.dup(stdout_fileno)
+    if not DEBUG:
+        # Redirect stdout to a StringIO object
+        # Create pipe and dup2() the write end of it on top of stdout, saving a copy of the old stdout
+        global stdout_pipe
+        global captured_stdout
+        captured_stdout = ''
+        stdout_pipe = os.pipe()
+        stdout_fileno = sys.stdout.fileno()
+        stdout_save = os.dup(stdout_fileno)
 
-    os.dup2(stdout_pipe[1], stdout_fileno)
-    os.close(stdout_pipe[1])
+        os.dup2(stdout_pipe[1], stdout_fileno)
+        os.close(stdout_pipe[1])
 
-    t = threading.Thread(target=drain_pipe)
-    t.start()
+        t = threading.Thread(target=drain_pipe)
+        t.start()
 
     n = preofemlib(ofem_file.file.encode())
     n = ofemlib(ofem_file.file.encode(), soalg.encode(), c_double(randsn))
     print()
 
-    # Close the write end of the pipe to unblock the reader thread and trigger it to exit
-    os.close(stdout_fileno)
-    t.join()
+    if not DEBUG:
+        # Close the write end of the pipe to unblock the reader thread and trigger it to exit
+        os.close(stdout_fileno)
+        t.join()
 
-    # Clean up the pipe and restore the original stdout
-    os.close(stdout_pipe[0])
-    os.dup2(stdout_save, stdout_fileno)
-    os.close(stdout_save)
+        # Clean up the pipe and restore the original stdout
+        os.close(stdout_pipe[0])
+        os.dup2(stdout_save, stdout_fileno)
+        os.close(stdout_save)
 
-    with open(ofem_file.file + '.log', 'a') as file:
-        file.write(captured_stdout)
+        with open(ofem_file.file + '.log', 'a') as file:
+            file.write(captured_stdout)
 
     ofem_file.pack()
     # compress_ofem(filename)
@@ -605,36 +642,38 @@ def ofemnlSolver(filename: str, soalg: str='d', randsn: float=1.0e-6) -> int:
         randsn = 1.0e-6
         print("\n'randsn' must be > 0. 'randsn' changed to 1.0e-6")
 
-    # Redirect stdout to a StringIO object
-    # Create pipe and dup2() the write end of it on top of stdout, saving a copy of the old stdout
-    global stdout_pipe
-    global captured_stdout
-    captured_stdout = ''
-    stdout_pipe = os.pipe()
-    stdout_fileno = sys.stdout.fileno()
-    stdout_save = os.dup(stdout_fileno)
+    if not DEBUG:
+        # Redirect stdout to a StringIO object
+        # Create pipe and dup2() the write end of it on top of stdout, saving a copy of the old stdout
+        global stdout_pipe
+        global captured_stdout
+        captured_stdout = ''
+        stdout_pipe = os.pipe()
+        stdout_fileno = sys.stdout.fileno()
+        stdout_save = os.dup(stdout_fileno)
 
-    os.dup2(stdout_pipe[1], stdout_fileno)
-    os.close(stdout_pipe[1])
+        os.dup2(stdout_pipe[1], stdout_fileno)
+        os.close(stdout_pipe[1])
 
-    t = threading.Thread(target=drain_pipe)
-    t.start()
+        t = threading.Thread(target=drain_pipe)
+        t.start()
 
     n = preofemnllib(filename.encode())
     n = ofemnllib(filename.encode(), soalg.encode(), c_double(randsn))
     print()
 
-    # Close the write end of the pipe to unblock the reader thread and trigger it to exit
-    os.close(stdout_fileno)
-    t.join()
+    if not DEBUG:
+        # Close the write end of the pipe to unblock the reader thread and trigger it to exit
+        os.close(stdout_fileno)
+        t.join()
 
-    # Clean up the pipe and restore the original stdout
-    os.close(stdout_pipe[0])
-    os.dup2(stdout_save, stdout_fileno)
-    os.close(stdout_save)
+        # Clean up the pipe and restore the original stdout
+        os.close(stdout_pipe[0])
+        os.dup2(stdout_save, stdout_fileno)
+        os.close(stdout_save)
 
-    with open(filename + '.log', 'a') as file:
-        file.write(captured_stdout)
+        with open(filename + '.log', 'a') as file:
+            file.write(captured_stdout)
 
     ofem_file.pack()
     # compress_ofem(filename)

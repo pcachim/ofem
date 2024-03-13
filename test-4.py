@@ -1,6 +1,6 @@
 import os
 import logging
-from ofempy import libofempy, Handler, ofemmesh, sap2000handler, common
+from ofempy import libofempy, Handler, sap2000handler, common, xfemmesh
 import ofempy
 from pathlib import Path
 import pandas as pd

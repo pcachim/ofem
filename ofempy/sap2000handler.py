@@ -10,7 +10,7 @@ import logging
 import timeit
 import copy
 from .common import *
-from .ofemmesh import *
+from .xfemmesh import *
 
 # pd.set_option("mode.copy_on_write", True)
 
@@ -944,7 +944,8 @@ class Sap2000Handler:
         if not self._check_input(filename):
             raise ValueError('Filename id nt in correct format')
 
-        self.ofem = OfemStruct("title stucture")
+        self.ofem = xfemStruct("title stucture")
+        self.ofem.filename = self._filename
 
         joints = self.s2k['Joint Coordinates'.upper()]
         elems = self.s2k['Connectivity - Frame'.upper()]
@@ -1025,6 +1026,7 @@ class Sap2000Handler:
         df.loc[:, "type"] = "area"
         df.loc[:, "angle"] = 0.0
         df.loc[:, "design"] = "none"
+        df.loc[:,["thick"]] = df.loc[:,["thick"]].astype(float)
 
         self.ofem.sections = pd.concat([self.ofem.sections, 
             df[["section", "type", "material", "design", "thick", "angle"]]])
