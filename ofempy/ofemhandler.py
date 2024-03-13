@@ -1,11 +1,12 @@
 import pathlib, logging, timeit
-import sys
+import sys, shutil
 import numpy as np
 import pandas as pd
 pd.set_option('mode.copy_on_write', True)
 #import eurocodepy as ec
-from . import ofemsolver
-from . import ofemmesh
+from . import libofempy
+from .ofemmesh import OfemStruct
+# from . import ofemmesh
 from .common import *
 import gmsh
 
@@ -28,7 +29,7 @@ def run_gmsh(s):
 class Handler:
 
     @staticmethod
-    def to_ofempy(struct: ofemmesh.OfemStruct, mesh_file: str):
+    def to_ofempy(struct: OfemStruct, mesh_file: str):
         """Writes a ofem file
 
         Args:
@@ -39,7 +40,7 @@ class Handler:
         path = pathlib.Path(mesh_file)
 
         jobname = str(path.parent / (path.stem + ".ofem"))
-        ofem_file = ofemsolver.OfemSolverFile(jobname, overwrite=True)
+        ofem_file = libofempy.OfemSolverFile(jobname, overwrite=True)
 
         # nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(2, includeBoundary=True)
         # coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))
@@ -250,7 +251,7 @@ class Handler:
 
                 file.write("\n")
                 file.write("### Title of the load case\n")
-                file.write("Uniform distributed load\n")
+                file.write(f"{case}\n")
 
                 file.write("\n")
                 file.write("### Load parameters\n")
@@ -362,11 +363,12 @@ class Handler:
 
         ofem_file.add(gldatname)
         ofem_file.add(cmdatname)
+        shutil.copyfile(jobname, jobname + ".zip")
 
         return
 
     @staticmethod
-    def to_gmsh(struct: ofemmesh.OfemStruct, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
+    def to_gmsh(struct: OfemStruct, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
         """Writes a GMSH mesh file and opens it in GMSH
 
         Args:
@@ -569,18 +571,14 @@ class Handler:
         gmsh.model.setAttribute("materials", data_list)
 
         gmsh.option.setNumber("Mesh.SaveAll", 1)
-
-        size = gmsh.model.getBoundingBox(-1, -1)
+        size = gmsh.model.getBoundingBox(2, 1)
 
         gmsh.write(filename)
-
         # # Launch the GUI to see the results:
         # if '-nopopup' not in sys.argv:
         #     gmsh.fltk.run()
 
         gmsh.finalize()
-
-        run_gmsh(filename)
-
+        # run_gmsh(filename)
 
         return

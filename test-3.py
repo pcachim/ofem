@@ -2,7 +2,7 @@ import math
 import os
 import logging
 import pathlib
-from ofempy import ofemsolver, pyfemrun
+from ofempy import libofempy, pyfemrun
 from pathlib import Path
 
 logging.basicConfig(level=logging.DEBUG)

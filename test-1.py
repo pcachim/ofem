@@ -3,7 +3,7 @@ import os
 import logging
 import pathlib
 import ofempy
-from ofempy import ofemsolver, sap2000handler, solver, results
+from ofempy import libofempy, sap2000handler, solver, results
 from pathlib import Path
 
 
@@ -14,10 +14,10 @@ print(Path.home())
 
 # Test ofem
 fname = os.path.join( os.getcwd(), "tests/cyl2")
-ofile = ofemsolver.OfemSolverFile(fname)
+ofile = libofempy.OfemSolverFile(fname)
 solver(fname, 'd', 1.0e-6)
 options = {'csryn': 'n', 'ksres': 2, 'lcaco': 'c'}
-codes = [ofemsolver.DI_CSV, ofemsolver.AST_CSV, ofemsolver.EST_CSV]
+codes = [libofempy.DI_CSV, libofempy.AST_CSV, libofempy.EST_CSV]
 results(fname, codes, **options)
 
 

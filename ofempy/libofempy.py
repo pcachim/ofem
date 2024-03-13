@@ -57,11 +57,11 @@ def drain_pipe():
         captured_stdout += data.decode()
 
 
-lib_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'libofempy.dylib')
+lib_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'libofemc.dylib')
 try:
     libofempy = CDLL(lib_path)
 except:
-    print("Cannot load library 'libofempy'")
+    print("Cannot load library 'libofemc'")
     exit()
 
 preofemlib = libofempy.prefemixlib
@@ -80,12 +80,37 @@ preofemnllib.restype = int
 ofemnllib = libofempy.femnllib
 ofemnllib.restype = int
 
-
 ofemfilessuffix = ['.gldat', '.cmdat', '.log', '.nldat', '.srdat',
                 '_gl.bin', '_re.bin', '_di.bin', '_sd.bin', '_st.bin', 
                 '_nl.bin', '_sn.bin', '_ff.bin', '_st.bin',
                 '_di.csv', '_avgst.csv', '_elnst.csv', 
                 '_gpstr.csv', '_react.csv', '_fixfo.csv', '_csv.info']
+
+class OfemOptions:
+    lcaco: str = 'l'
+    cstyn: str = 'y'
+    stnod: str = 'a'
+    csryn: str = 'n'
+    ksres: int = 1
+    kstre: int = 1
+    kdisp: int = 1
+
+    def __init__(
+            self, lcaco: str='l', cstyn: str='y', stnod: str='a', csryn: str='n', 
+            ksres: int=1, kstre: int=1, kdisp: int=1):
+        self.lcaco = lcaco
+        self.cstyn = cstyn
+        self.stnod = stnod
+        self.csryn = csryn
+        self.ksres = ksres
+        self.kstre = kstre
+        self.kdisp = kdisp
+
+    def __str__(self):
+        return f"lcaco: {self.lcaco}, cstyn: {self.cstyn}, stnod: {self.stnod}, csryn: {self.csryn}, ksres: {self.ksres}, kstre: {self.kstre}, kdisp: {self.kdisp}"
+
+    def __repr__(self):
+        return f"OfemOptions(lcaco: {self.lcaco}, cstyn: {self.cstyn}, stnod: {self.stnod}, csryn: {self.csryn}, ksres: {self.ksres}, kstre: {self.kstre}, kdisp: {self.kdisp})"
 
 
 class OfemSolverFile:
@@ -446,18 +471,20 @@ def results(filename:str, codes: list, **kwargs):
 
     ncode = len(codes)
 
-    global stdout_pipe
-    global captured_stdout 
-    captured_stdout = ''
-    stdout_pipe = os.pipe()
-    stdout_fileno = sys.stdout.fileno()
-    stdout_save = os.dup(stdout_fileno)
+    capture_output = False
+    if capture_output:
+        global stdout_pipe
+        global captured_stdout 
+        captured_stdout = ''
+        stdout_pipe = os.pipe()
+        stdout_fileno = sys.stdout.fileno()
+        stdout_save = os.dup(stdout_fileno)
 
-    os.dup2(stdout_pipe[1], stdout_fileno)
-    os.close(stdout_pipe[1])
+        os.dup2(stdout_pipe[1], stdout_fileno)
+        os.close(stdout_pipe[1])
 
-    t = threading.Thread(target=drain_pipe)
-    t.start()
+        t = threading.Thread(target=drain_pipe)
+        t.start()
 
     # Pass a pointer to the integer object to the C function
     myarray = (c_int * len(codes))(*codes)
@@ -466,17 +493,18 @@ def results(filename:str, codes: list, **kwargs):
                     stnod.encode(), csryn.encode(), 
                     c_int(ksres), c_int(kstre), c_int(kdisp))
 
-    # Close the write end of the pipe to unblock the reader thread and trigger it to exit
-    os.close(stdout_fileno)
-    t.join()
+    if capture_output:
+        # Close the write end of the pipe to unblock the reader thread and trigger it to exit
+        os.close(stdout_fileno)
+        t.join()
 
-    # Clean up the pipe and restore the original stdout
-    os.close(stdout_pipe[0])
-    os.dup2(stdout_save, stdout_fileno)
-    os.close(stdout_save)
+        # Clean up the pipe and restore the original stdout
+        os.close(stdout_pipe[0])
+        os.dup2(stdout_save, stdout_fileno)
+        os.close(stdout_save)
 
-    with open(ofem_file.file + '.log', 'a') as file:
-        file.write(captured_stdout)
+        with open(ofem_file.file + '.log', 'a') as file:
+            file.write(captured_stdout)
 
     ofem_file.pack()
     # compress_ofem(filename)

@@ -23,6 +23,6 @@ from .sap2000handler import Sap2000Handler
 
 from .gmshhandler import GmshHandler
 from .gmshapp import gmshApp
-from .ofemsolver import solver, results, OfemSolverFile
+from .libofempy import solver, results, OfemSolverFile
 from .meshstruct import Slab, Beam
 # from .ofemstructfile import OfemStructFile

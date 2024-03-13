@@ -1,9 +1,10 @@
 import os
 import logging
-from ofempy import ofemsolver, Handler, ofemmesh, sap2000handler
+from ofempy import libofempy, Handler, ofemmesh, sap2000handler, common
 import ofempy
 from pathlib import Path
 import pandas as pd
+import gmsh, sys
 
 logging.basicConfig(level=logging.DEBUG)
 logging.debug("Test started.\n")
@@ -18,5 +19,18 @@ off = sap2000handler.Sap2000Handler(fname).to_ofem_struct()
 
 logging.debug("\n\nWrting gmsh.\n")
 hand = Handler.to_gmsh(off, "tests/test_6.msh", entities='sections')
+
+gmsh.initialize(sys.argv)
+
+gmsh.option.setNumber("Mesh.Lines", 1)
+gmsh.option.setNumber("Mesh.SurfaceFaces", 1)
+gmsh.option.setNumber("Mesh.LineWidth", 5)
+gmsh.option.setNumber("Mesh.ColorCarousel", common.gmsh_colors['physical'])
+
+gmsh.open("tests/test_6.msh")
+if '-nopopup' not in sys.argv:
+    gmsh.fltk.run()
+
+gmsh.finalize()
 
 logging.debug("\n\nTest finished.")

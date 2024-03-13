@@ -45,6 +45,7 @@ def replace_bytesio_in_zip(zip_path, target_filename, new_contents):
     # Replace the original ZIP file with the temporary one
     os.replace(temp_zip_path, zip_path)
 
+
 class OfemMesh:
     
     def __init__(self, title: str):
@@ -420,12 +421,13 @@ class OfemMesh:
 
 
 class OfemStruct:
-    
+
     def __init__(self, title: str):
         self.title = title
         self._dirty = [False for i in range(NTABLES)]
         # GEOMETRY
         self._mesh: OfemMesh = OfemMesh(self.title)
+        self._results = {'node': [], 'element': [], 'elementnode': []}
         # MATERIALS
         self._sections = pd.DataFrame(columns= ["section", "type", "material"])
         self._supports = pd.DataFrame(columns= ["point", "ux", "uy", "uz", "rx", "ry", "rz"])
@@ -880,12 +882,13 @@ class OfemStruct:
         ### falta implementar a direção
 
         cases = {
-            k: {"index": 0, "type": "dead", "point": {}, "line": {}, "area": {}, 
+            k: {"index": 0, "name": "", "type": "dead", "point": {}, "line": {}, "area": {}, 
                 "temp": {}, "grav": {}, "displ": {}} 
             for k in self._loadcases['case'].unique().tolist()}
 
         for i, k in enumerate(cases.keys()):
             case = self._loadcases[self._loadcases['case'] == k].iloc[0]
+            cases[k]["name"] = case.case
             cases[k]["type"] = case.type
             cases[k]["index"] = i + 1
             # go through gravity loads
@@ -927,15 +930,15 @@ class OfemStruct:
     def num_load_cases(self):
         return self._loadcases.shape[0]
 
+
 class OfemData:
     def __init__(self) -> None:
         self._point_data = pd.DataFrame(
-            columns = ['point', 'tag', 'type', 'valint', 'valfloat', 'valstr', 'v1', 'v2', 'v3'])
+            columns = ['point', 'tag', 'type', 'value', 'v1', 'v2', 'v3'])
         self._element_data = pd.DataFrame(
-            columns = ['element', 'tag', 'type', 'valint', 'valfloat', 'valstr'])
+            columns = ['element', 'tag', 'type', 'value'])
         self._element_node_data = pd.DataFrame(
-            columns = ['element', 'tag', 'type', 'valint', 'valfloat', 'valstr',
-                        'node1', 'node2'])
+            columns = ['element', 'tag', 'type', 'value', 'node1', 'node2'])
 
     def read_xfem(self, filename: str): 
         path = Path(filename)
