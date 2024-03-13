@@ -96,7 +96,7 @@ class Handler:
         with open(gldatname, 'w') as file:
 
             file.write("### Main title of the problem\n")
-            file.write(struct.title + "\n")
+            file.write(struct._title + "\n")
 
             file.write("\n")
             file.write("### Main parameters\n")
@@ -340,7 +340,7 @@ class Handler:
         with open(cmdatname, 'w') as file:
 
             file.write("### Main title of the problem\n")
-            file.write(struct.title + "\n")
+            file.write(struct._title + "\n")
 
             file.write("### Number of combinations\n")
             file.write("%6d # ncomb (number of combinations)\n\n" % len(combos))
@@ -387,7 +387,7 @@ class Handler:
         # initialize gmsh
         gmsh.initialize(sys.argv)
 
-        modelname = pathlib.Path(filename).stem + ' - ' + struct.title
+        modelname = pathlib.Path(filename).stem + ' - ' + struct._title
         gmsh.model.add(modelname)
         gmsh.model.setFileName(filename)
 

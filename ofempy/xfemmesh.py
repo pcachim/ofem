@@ -444,11 +444,11 @@ class xfemMesh:
 class xfemStruct:
 
     def __init__(self, title: str):
-        self.title = title
+        self._title = title
         self._dirty = [False for i in range(NTABLES)]
         self._filename = None
         # GEOMETRY
-        self._mesh: xfemMesh = xfemMesh(self.title)
+        self._mesh: xfemMesh = xfemMesh(self._title)
         # MATERIALS AND SECTIONS
         self._sections = pd.DataFrame(columns= ["section", "type", "material"])
         self._supports = pd.DataFrame(columns= ["point", "ux", "uy", "uz", "rx", "ry", "rz"])
@@ -770,7 +770,7 @@ class xfemStruct:
     @property
     def mesh(self):
         return self._mesh
-    
+
     @mesh.setter
     def mesh(self, mesh):
         if False:
@@ -778,17 +778,17 @@ class xfemStruct:
             self._mesh._dirtyelements = True
             self._mesh._dirtypoints = True
         else: 
-            self.mesh = mesh
+            self._mesh = mesh
         return
-    
+
     # @property
     # def title(self):
-    #     return self._mesh._title
-    
+    #     return self._title
+
     # @title.setter
     # def title(self, title):
     #     self._mesh._title = title
-        
+
     @property
     def points(self):
         return self._mesh.points
@@ -1011,7 +1011,7 @@ class xfemStruct:
         with open(gldatname, 'w') as file:
 
             file.write("### Main title of the problem\n")
-            file.write(self.title + "\n")
+            file.write(self._title + "\n")
 
             file.write("\n")
             file.write("### Main parameters\n")
@@ -1328,7 +1328,7 @@ class xfemStruct:
         # initialize gmsh
         gmsh.initialize(sys.argv)
 
-        modelname = Path(filename).stem + ' - ' + self.title
+        modelname = Path(filename).stem + ' - ' + self._title
         gmsh.model.add(modelname)
         gmsh.model.setFileName(filename)
 
@@ -1555,7 +1555,7 @@ class xfemData:
         """
         self._collection[name] = data
         return
-    
+
     def remove(self, name: str):
         if name in self._collection.keys():
             self._collection.pop(name)
@@ -1580,10 +1580,37 @@ class xfemData:
 
         if file_format == ".xfem":
             self.read_xfem(filename)
-        # elif file_format == ".xlsx":
-        #     self.read_excel(filename)
         else:
             raise ValueError(f"File format {file_format} not recognized")
+        return
+
+    def save(self, filename: str, file_format: str = None):
+        path = Path(filename)
+        
+        if path.suffix == "" and file_format == None:
+            raise ValueError(f"File format not recognized")
+
+        if file_format == None:
+            file_format = Path(filename).suffix
+
+        if file_format == ".xlsx":
+            self.write_excel(filename)
+        elif file_format == ".xfem":
+            self.write_xfem(filename)
+        else:
+            raise ValueError(f"File format {file_format} not recognized")
+
+        return
+
+    def write_excel(self, filename: str):
+        path = Path(filename)
+        if path.suffix != ".xlsx":
+            filename = path.with_suffix(".xlsx")
+
+        with pd.ExcelWriter(filename) as writer:
+            for key, df in self._collection.items():
+                df.to_excel(writer, sheet_name=key, index=False)
+
         return
 
     def write_xfem(self, filename: str):
