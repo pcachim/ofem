@@ -5,7 +5,7 @@ import copy
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ._common import num_nodes_per_cell, warn
+from .common import num_nodes_per_cell, warn
 
 topological_dimension = {
     "line": 1,

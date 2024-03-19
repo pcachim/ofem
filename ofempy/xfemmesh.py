@@ -1,6 +1,9 @@
 DEBUG = False
 
 from . import common
+from . import sap2000handler
+from .ofem.libofempy import OfemSolverFile
+from . import ofem
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Union
@@ -9,8 +12,8 @@ import pandas as pd
 import meshio, gmsh
 import sys, os, io, json, zipfile, re
 import timeit, logging, shutil
-from .ofem.libofempy import OfemSolverFile
-from . import ofem
+
+from . import adapters
 
 # pd.options.mode.copy_on_write = True
 elemtypes = list(common.ofem_meshio.keys())
@@ -80,9 +83,13 @@ class xfemMesh:
         self._elemtag_to_id = {}
         return
     
-    def _set_tags_to_id(self, base: int = 1):
-        self._nodetag_to_id = dict(zip(self._points["point"].values, np.arange(base, self.num_points+base)))
-        self._elemtag_to_id = dict(zip(self._elements["element"].values, np.arange(base, self.num_elements+base)))
+    def _set_tags_to_id(self, base: int = 1, tostr: bool = False):
+        if tostr:
+            self._nodetag_to_id = dict(zip(self._points["point"].values,  [str(i) for i in range(base, self.num_points+base)]))
+            self._elemtag_to_id = dict(zip(self._elements["element"].values, [str(i) for i in range(base, self.num_elements+base)]))
+        else:
+            self._nodetag_to_id = dict(zip(self._points["point"].values,  np.arange(base, self.num_points+base)))
+            self._elemtag_to_id = dict(zip(self._elements["element"].values, np.arange(base, self.num_elements+base)))
         return
 
     def set_points_elems_id(self, base: int = 1):
@@ -181,26 +188,30 @@ class xfemMesh:
         return
 
     def _to_meshio(self):
+
         self._set_tags_to_id(base=0)
-        points = self._points[["x", "y", "z"]].values
-        # points = np.array(self.points[["x", "y", "z"]])
-        print(f"points:\n{points}")
+        points = self._points[["x", "y", "z"]].values.tolist()
+
         elems = []
-        for k, v in self.elemlist.items():
-            if v.size == 0: continue
+        unique_elements = self._elements["type"].unique()
+        for ielem in unique_elements:
+            k_elems = self._elements[self._elements["type"] == ielem].copy()
+            l_nodes = self.get_list_node_columns(ielem)
 
-            k_elems = self._elements[self._elements["type"] == k]
-            nnodes = int(re.search(r"\d+$", k).group())
-            nlist = [f"node{i}" for i in range(1, nnodes+1)]
-            # for col in nlist:
-            #     k_elems[col] = k_elems[col].replace(to_replace=self.nodetag_to_id)
-            k_elems = k_elems[nlist].replace(to_replace=self._nodetag_to_id)
+        ### tentar este método quando passa xfem para gmsh
+            k_elems.loc[:,l_nodes] = k_elems.loc[:,l_nodes].replace(to_replace=self._nodetag_to_id).astype(str)
+            elems.append((common.ofem_meshio[ielem], np.array(k_elems[l_nodes]).astype(int).tolist()))
 
-            elems.append((common.ofem_meshio[k], np.array(k_elems[nlist]).astype(int).tolist()))
-            print(f"elems2:\n{elems}")
-            
-        msh = meshio.Mesh(points,elems)
-        return msh
+        mesh = meshio.Mesh(
+            points,
+            elems)
+        #     # Optionally provide extra data on points, cells, etc.
+        #     point_data={"T": [0.3, -1.2, 0.5, 0.7, 0.0, -3.0]},
+        #     # Each item in cell data must match the cells array
+        #     cell_data={"a": [[0.1, 0.2], [0.4]]},
+        # )
+
+        return mesh
 
     def write_xfem(self, filename: str):
         path = Path(filename)
@@ -512,7 +523,7 @@ class xfemStruct:
 
     def read_excel(self, filename: str):
         path = Path(filename)
-        if path.suffix == ".xfem":
+        if path.suffix == ".xlsx":
             self.read_xfem(filename)
 
         dfs = pd.read_excel(filename, sheet_name=None)
@@ -687,6 +698,10 @@ class xfemStruct:
         else:
             raise ValueError(f"File format {file_format} not recognized")
         return
+
+    def import_sap2000(self, filename: str):
+        # return sap2000handler.Reader(filename).to_ofem_struct()
+        return adapters.Reader(filename).to_ofem_struct()
 
     def to_dict(self):
         return {
@@ -1309,6 +1324,46 @@ class xfemStruct:
 
         return
 
+    def to_meshio(self):
+
+        self.mesh._set_tags_to_id(base=0)
+        points = self.mesh.points[["x", "y", "z"]].values.tolist()
+
+        elements = []
+        unique_elements = self.mesh.elements["type"].unique()
+        for ielem in unique_elements:
+            k_elems = self.elements[self.elements["type"] == ielem].copy()
+            l_nodes = self.mesh.get_list_node_columns(ielem)
+        ### tentar este método quando passa xfem para gmsh
+            k_elems.loc[:,l_nodes] = k_elems.loc[:,l_nodes].replace(to_replace=self.mesh._nodetag_to_id)
+            elements.append((common.ofem_meshio[ielem], np.array(k_elems[l_nodes]).astype(int).tolist()))
+
+        elem_data = {}
+        elems = self.elements.copy()
+        sec_dict = dict(zip(self.sections['section'], range(len(self.sections['section']))))
+        elems.loc[:,'section'] = self.element_sections.loc[:,'element'].apply(
+            lambda x: sec_dict[self.element_sections.at[x, 'section']]
+            )
+
+        elem_data['section'] = []
+        for i, ielem in enumerate(unique_elements):
+            kelems = elems.loc[elems["type"] == ielem, 'section']
+            elem_data['section'].append(
+                kelems.values.tolist()
+            )
+
+        mesh = meshio.Mesh(
+            points,
+            elements,
+            cell_data=elem_data)
+        #     # Optionally provide extra data on points, cells, etc.
+        #     point_data={"T": [0.3, -1.2, 0.5, 0.7, 0.0, -3.0]},
+        #     # Each item in cell data must match the cells array
+        #     cell_data={"a": [[0.1, 0.2], [0.4]]},
+        # )
+
+        return mesh
+
     def to_gmsh(self, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
         """Writes a GMSH mesh file and opens it in GMSH
 
@@ -1366,10 +1421,16 @@ class xfemStruct:
         njoins = self.mesh.num_points
         ijoins = self.mesh.points['id'].values
 
+        max_values = joints[['x', 'y', 'z']].max()
+        min_values = joints[['x', 'y', 'z']].max()
+        gmsh.model.geo.addPoint(min_values[0], min_values[1], min_values[2], tag=1)
+        gmsh.model.geo.addPoint(max_values[0], max_values[1], max_values[2], tag=2)
+        gmsh.model.geo.synchronize()
+
         joints['coord'] = joints[['x', 'y', 'z']].values.tolist()
-        ient = gmsh.model.addDiscreteEntity(common.POINT)
-        gmsh.model.setEntityName(common.CURVE, ient, 'nodes')
-        gmsh.model.mesh.addNodes(common.POINT, ient, ijoins, joints['coord'].explode().to_list())
+        ient = gmsh.model.addDiscreteEntity(common.POINT, )
+        gmsh.model.setEntityName(common.CURVE, 1, 'nodes')
+        gmsh.model.mesh.addNodes(common.POINT, 1, ijoins, joints['coord'].explode().to_list())
 
         # ELEMENTS - FRAMES
         logging.info(f"Processing frames ({self.mesh.num_elements})...")
@@ -1463,6 +1524,8 @@ class xfemStruct:
         else:
             raise ValueError('entities must be "types", "sections" or "elements"')
 
+        # gmsh.model.mesh.createTopology()
+        # gmsh.model.mesh.createGeometry()
         # PHYSICALS
         # if physicals == 'sections':
         #     for sec in framesections:
@@ -1492,6 +1555,10 @@ class xfemStruct:
         data_list = self.materials.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
         gmsh.model.setAttribute("materials", data_list)
 
+        # SAVE GEOMETRIC DATA
+        gmsh.write(filename)
+        gmsh.write(filename + ".vtk")
+
         # DATA NODAL
         for i, case in enumerate(self._loadcases.itertuples()):
             values = self._results.items['displacements'].loc[self._results.items['displacements']['icomb'] == i+1]
@@ -1501,6 +1568,9 @@ class xfemStruct:
                 gmsh.view.addHomogeneousModelData(
                     view, 0, modelname, "NodeData", values["point"].values, values[idof].values)
                 gmsh.view.option.setNumber(view, "Visible", 0)
+                
+                # gmsh.view.write(view, filename, append=True)
+
 
         if DEBUG:
             logging.debug(f"Execution time: {round((timeit.default_timer() - starttime)*1000,3)} ms")
@@ -1508,10 +1578,9 @@ class xfemStruct:
 
         gmsh.option.setNumber("Mesh.SaveAll", 1)
         size = gmsh.model.getBoundingBox(2, 1)
-
-        gmsh.write(filename)
+        gmsh.finalize()
         
-        run_gmsh(filename)
+        # run_gmsh(filename)
 
         return
 

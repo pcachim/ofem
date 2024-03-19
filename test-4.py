@@ -15,7 +15,7 @@ logging.debug("Test started.\n")
 #fname = os.path.join( os.getcwd(), "tests/test.s2k")
 fname = os.path.join( os.getcwd(), "tests/demo-s2k.s2k")
 
-off = sap2000handler.Sap2000Handler(fname).to_ofem_struct()
+off = sap2000handler.Reader(fname).to_ofem_struct()
 
 logging.debug("\n\nWrting gmsh.\n")
 hand = Handler.to_gmsh(off, "tests/test_6.msh", entities='sections')

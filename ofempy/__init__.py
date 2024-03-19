@@ -19,7 +19,7 @@ from . import gmshapp
 # from .femixhandler import femix_handler
 
 from . import sap2000handler
-from .sap2000handler import Sap2000Handler
+from .sap2000handler import Reader
 
 from .gmshhandler import GmshHandler
 from .gmshapp import gmshApp

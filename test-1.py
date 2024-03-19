@@ -61,7 +61,7 @@ slab.run()
 
 #fname = os.path.join( os.getcwd(), "tests/test.s2k")
 fname = os.path.join( os.getcwd(), "tests/test.xlsx")
-s2000 = ofempy.Sap2000Handler(fname)
+s2000 = ofempy.Reader(fname)
 # s2000.to_femix()
 # fname = os.path.join( os.getcwd(), "test.xlsx")
 # s2000.read_excel(fname, 'pandas')

@@ -17,17 +17,17 @@ logging.debug("Test started.\n")
 #fname = os.path.join( os.getcwd(), "tests/test.s2k")
 fname = os.path.join( os.getcwd(), "tests/demo-s2k.s2k")
 
-off = sap2000handler.Sap2000Handler(fname).to_ofem_struct()
+off = sap2000handler.Reader(fname).to_ofem_struct()
 logging.debug("\nSaving xfem.\n")
-off.save("tests/test_7.xfem")
+off.save("tests/test_2.xfem")
 
 logging.debug("\nWriting ofem.\n")
-hand = xfemStruct.to_ofempy(off, "tests/test_7.ofem")
+hand = xfemStruct.to_ofempy(off, "tests/test_2.ofem")
 
 logging.debug("\nStart solving.\n")
-test = ofem.solve("tests/test_7.ofem", 'd', 1.0e-6)
+test = ofem.solve("tests/test_2.ofem", 'd', 1.0e-6)
 logging.debug("\nFinish solving.\n")
-shutil.copyfile("tests/test_7.ofem", "tests/test_7.res.zip")
+shutil.copyfile("tests/test_2.ofem", "tests/test_2.res.zip")
 
 # gmsh.initialize()
 # df = ofem.get_csv_from_ofem("tests/test_6", ofem.DI_CSV)

@@ -9,9 +9,8 @@ import sys
 import logging
 import timeit
 import copy
-from .common import *
-from . import xfemmesh
-from .xfemmesh import *
+from ..common import *
+from .. import xfemmesh
 
 # pd.set_option("mode.copy_on_write", True)
 
