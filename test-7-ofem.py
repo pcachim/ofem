@@ -1,14 +1,14 @@
 import os
 import logging
-from ofempy.xfemmesh import xfemStruct
-import ofempy.xfemmesh as xfemmesh
-import ofempy.ofem as ofem
-import ofempy.sap2000handler as sap2000handler
+from src.xfemmesh import xfemStruct
+import src.xfemmesh as xfemmesh
+import src.ofem as ofem
+import src.sap2000handler as sap2000handler
 import shutil
 from pathlib import Path
 import pandas as pd
 import gmsh
-import ofempy.decorators
+import src.decorators
 
 logging.basicConfig(level=logging.DEBUG)
 logging.debug("Test started.\n")

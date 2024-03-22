@@ -28,7 +28,7 @@
 ############################################################################
 
 import sys, os, meshio, getopt
-import ofempy.xfemmesh as xfemmesh
+import src.xfemmesh as xfemmesh
 
 class PyFEMHandler:
     def __init__(self):

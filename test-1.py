@@ -2,9 +2,9 @@ import math
 import os
 import logging
 import pathlib
-import ofempy
-from ofempy import sap2000handler
-from ofempy import ofem
+import src
+from src import sap2000handler
+from src import ofem
 from pathlib import Path
 
 
@@ -38,8 +38,8 @@ ofem.libofempy.results(fname, codes, **options)
 
 fname = os.path.join( os.getcwd(), "tests/demo.gldat")
 mat = {'E': 30000000, 'nu': 0.3, 'rho': 25.0, 'alpha': 1.0e-5}
-slab = ofempy.Slab()
-slab.addGeometry(ofempy.meshstruct.CIRCULAR_WITH_HOLE, (0, 0, 0), 3, 1, 0.2,
+slab = src.Slab()
+slab.addGeometry(src.meshstruct.CIRCULAR_WITH_HOLE, (0, 0, 0), 3, 1, 0.2,
                  boundary=[0, 0, 1, 1], material=mat, thick=0.25, load=-10.0)
 
 # slab.addGeometry(msh.meshstruct.CIRCULAR_QUARTER, (0, 0, 0), 3, 0*math.pi/180, 0.2,
@@ -62,7 +62,7 @@ slab.run()
 
 #fname = os.path.join( os.getcwd(), "tests/test.s2k")
 fname = os.path.join( os.getcwd(), "tests/test.xlsx")
-s2000 = ofempy.Reader(fname)
+s2000 = src.Reader(fname)
 # s2000.to_femix()
 # fname = os.path.join( os.getcwd(), "test.xlsx")
 # s2000.read_excel(fname, 'pandas')

@@ -41,7 +41,7 @@ class MaterialManager ( list ):
       matType = matProps.type
 
       # self.material = getattr(__import__('pyfem.materials.'+matType , globals(), locals(), matType , 0 ), matType )
-      self.material = getattr(__import__('modelmsh.pyfem.materials.'+matType , globals(), locals(), matType , 0 ), matType )
+      self.material = getattr(__import__('ofempy.pyfem.materials.'+matType , globals(), locals(), matType , 0 ), matType )
     
       self.matlist     = []
       self.matProps    = matProps

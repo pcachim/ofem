@@ -1,6 +1,51 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "ofempy"
+version = "2024.3.1"
+requires-python = ">=3.9"
+authors = [
+    {name = "Paulo Cachim", email = "pcachim@ua.pt"},
+]
+# maintainers = [
+#     {name = "Paulo Cachim", email = "pcachim@ua.pt"}
+# ]
+description = "Finite element mesh generator and analysis tool"
+# readme = "README.md"
+# license = {file = "LICENSE.txt"}
+keywords = ["FEM", "finite elements",  "mesh generator"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python"
+]
+# dependencies = [
+#     "httpx",
+#     "gidgethub[httpx]>4.0.0",
+#     "django>2.1; os_name != 'nt'",
+#     "django>2.0; os_name == 'nt'",
+# ]
+
+# [project.optional-dependencies]
+# gui = ["PyQt5"]
+# cli = [
+#     "rich",
+#     "click",
+# ]
+
+# [project.urls]
+# Homepage = "https://example.com"
+# Documentation = "https://readthedocs.org"
+# Repository = "https://github.com/me/spam.git"
+# "Bug Tracker" = "https://github.com/me/spam/issues"
+# Changelog = "https://github.com/me/spam/blob/master/CHANGELOG.md"
+
+# [project.scripts]
+# spam-cli = "spam:main_cli"
+
+# [project.gui-scripts] (for Windows only)
+# spam-gui = "spam:main_gui"
+
+# [project.entry-points."spam.magical"]
+# tomatoes = "spam:main_tomatoes"

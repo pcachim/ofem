@@ -1,4 +1,4 @@
-"""modelmsh: A Python package for the generation of 2D and 3D meshes for finite element analysis.
+"""ofempy: A Python package for the generation of 2D and 3D meshes for finite element analysis.
 with the following features:
     read and write mesh files in the following formats:
         cgns, gmsh, med, medit, msh, nastran, stl, vtk, vtu
@@ -6,7 +6,7 @@ with the following features:
 - sap2000: reads SAP2000 files.
 """
 
-__version__ = "0.1.0"
+__version__ = "2024.3.1"
 
 from . import xfemmesh
 from . import ofem

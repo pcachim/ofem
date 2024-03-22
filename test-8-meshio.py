@@ -1,8 +1,8 @@
 import os
 import logging
-from ofempy.xfemmesh import xfemStruct
-import ofempy.ofem as ofem
-import ofempy.sap2000handler as sap2000handler
+from src.xfemmesh import xfemStruct
+import src.ofem as ofem
+import src.sap2000handler as sap2000handler
 import shutil
 from pathlib import Path
 import pandas as pd
