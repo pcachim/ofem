@@ -115,14 +115,19 @@ class xfemMesh:
         self._points.set_index(ipoint, inplace=True)
         self._dirtypoints = False
 
-    def save(self, filename: str, file_format: str = "xfem"):
-        if file_format == "xfem":
+    def save(self, filename: str, file_format: str = None):
+        if file_format == None:
+            file_format = Path(filename).suffix
+            if file_format == "":
+                file_format = ".msh"
+                filename += file_format
+
+        if file_format == ".xfem":
             self._to_ofem(filename)
-        elif file_format == "gmsh":
+        elif file_format == '.msh':
             self.write_gmsh(filename)
-        elif file_format == "meshio":
+        elif file_format == ".vtk" or file_format == ".vtu":
             msh = self._to_meshio()
-        elif file_format == "vtk":
             msh.write(filename, file_format="vtk", binary=False)
         else:
             raise ValueError(f"File format {file_format} not recognized")
@@ -246,10 +251,10 @@ class xfemMesh:
         coordlist = self._points[["x", "y", "z"]].values.ravel().tolist()
         entity = gmsh.model.addDiscreteEntity(0)
         gmsh.model.mesh.addNodes(0, entity, listofnodes, coordlist)
+        elemlist = self._elements['type'].unique()
 
         # Add elements
-        for elemtype in elemtypes:
-            if self.elemlist[elemtype].size == 0:  continue
+        for elemtype in elemlist:
 
             gmsh_dim = common.ofem_gmsh_dim[elemtype]
             entity = gmsh.model.addDiscreteEntity(gmsh_dim)
@@ -324,6 +329,7 @@ class xfemMesh:
     @property
     def dirty(self):
         return self._dirtypoints and self._dirtyelements
+
     @property
     def num_elements(self):
         return self._elements.shape[0]
@@ -621,6 +627,25 @@ class xfemStruct:
                 self._solidloads.to_excel(writer, sheet_name='solidloads', index=False)
         return
 
+    def read_xfem(self, filename: str): 
+        path = Path(filename)
+        if path.suffix != ".xfem":
+            raise ValueError(f"File {filename} is not a .xfem file")
+
+        with zipfile.ZipFile(filename, 'r') as zip_file:
+            with zip_file.open('struct.json') as json_file:
+                data = json.load(json_file)
+                self.from_dict(data)
+            with zip_file.open('mesh.json') as json_file:
+                data = json.load(json_file)
+                self.mesh.from_dict(data)
+            with zip_file.open('data.json') as json_file:
+                data = json.load(json_file)
+                self._results.from_dict(data)
+
+        self._filename = path.parent / path.stem
+        return
+
     def write_xfem(self, filename: str):
         path = Path(filename)
         if path.suffix != ".xfem":
@@ -668,25 +693,6 @@ class xfemStruct:
         # self._dirty = [False for i in range(NTABLES)]
         return
 
-    def read_xfem(self, filename: str): 
-        path = Path(filename)
-        if path.suffix != ".xfem":
-            raise ValueError(f"File {filename} is not a .xfem file")
-
-        with zipfile.ZipFile(filename, 'r') as zip_file:
-            with zip_file.open('struct.json') as json_file:
-                data = json.load(json_file)
-                self.from_dict(data)
-            with zip_file.open('mesh.json') as json_file:
-                data = json.load(json_file)
-                self.mesh.from_dict(data)
-            with zip_file.open('data.json') as json_file:
-                data = json.load(json_file)
-                self._results.from_dict(data)
-
-        self._filename = path.parent / path.stem
-        return
-
     def read(self, filename: str, file_format: str = None):
         if file_format == None:
             file_format = Path(filename).suffix
@@ -699,10 +705,14 @@ class xfemStruct:
             raise ValueError(f"File format {file_format} not recognized")
         return
 
-    def import_sap2000(self, filename: str):
-        # return sap2000handler.Reader(filename).to_ofem_struct()
-        return adapters.Reader(filename).to_ofem_struct()
+    @staticmethod
+    def import_sap2000(filename: str):
+        return adapters.sap2000.Reader(filename).to_ofem_struct()
 
+    @staticmethod
+    def import_msh(filename: str):
+        return adapters.msh.Reader(filename).to_ofem_struct()
+    
     def to_dict(self):
         return {
             "sections": self._sections.to_dict(orient="records"),
@@ -796,13 +806,13 @@ class xfemStruct:
             self._mesh = mesh
         return
 
-    # @property
-    # def title(self):
-    #     return self._title
+    @property
+    def title(self):
+        return self._title
 
-    # @title.setter
-    # def title(self, title):
-    #     self._mesh._title = title
+    @title.setter
+    def title(self, title):
+        self._mesh._title = title
 
     @property
     def points(self):
@@ -1364,7 +1374,7 @@ class xfemStruct:
 
         return mesh
 
-    def to_gmsh(self, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
+    def export_msh(self, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
         """Writes a GMSH mesh file and opens it in GMSH
 
         Args:
@@ -1463,10 +1473,10 @@ class xfemStruct:
             raise ValueError('entities must be "types", "sections" or "elements"')
 
         # ELEMENTS - AREAS
-        areas['node1'] = joints.loc[areas['node1'].values, 'id'].values
-        areas['node2'] = joints.loc[areas['node2'].values, 'id'].values
-        areas['node3'] = joints.loc[areas['node3'].values, 'id'].values
-        areas['node4'] = areas.apply(lambda row: 'nan' if row['node4'] == 'nan' else joints.at[row['node4'], 'id'], axis=1)
+        for col in areas.columns:
+            if not col.startswith('node'):
+                continue
+            areas[col] = joints.loc[areas[col].values, 'id'].values
 
         if entities == 'sections':
             for sec in areasections:
@@ -1475,14 +1485,16 @@ class xfemStruct:
                 gmsh.model.setEntityName(common.SURFACE, surf, sec)
 
                 areas3 = areasl.loc[areasl['type'] == 'area3'].copy()
-                areas3['nodes'] = areas3[['node1', 'node2', 'node3']].values.tolist()
-                gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area3'], areas3['id'].to_list(), 
-                        areas3['nodes'].explode().to_list())
+                if not areas3.empty:
+                    areas3['nodes'] = areas3[['node1', 'node2', 'node3']].values.tolist()
+                    gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area3'], areas3['id'].to_list(), 
+                            areas3['nodes'].explode().to_list())
 
                 areas3 = areasl.loc[areasl['type'] == 'area4'].copy()
-                areas3['nodes'] = areas3[['node1', 'node2', 'node3', 'node4']].values.tolist()
-                gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area4'], areas3['id'].to_list(), 
-                        areas3['nodes'].explode().to_list())
+                if not areas3.empty:
+                    areas3['nodes'] = areas3[['node1', 'node2', 'node3', 'node4']].values.tolist()
+                    gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area4'], areas3['id'].to_list(), 
+                            areas3['nodes'].explode().to_list())
 
                 gmsh.model.addPhysicalGroup(common.SURFACE, [surf], name="section: " + sec)
 
@@ -1547,13 +1559,13 @@ class xfemStruct:
         #     raise ValueError('physicals must be "sections" or "materials"')
 
         # ATTRIBUTES
-        gmsh.model.setAttribute("supports", self.supports['point'].values.tolist())
+        gmsh.model.setAttribute("Supports", self.supports['point'].values.tolist())
         data_list = self.supports.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
-        gmsh.model.setAttribute("supports", data_list)
+        gmsh.model.setAttribute("Supports", data_list)
         data_list = self.sections.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
-        gmsh.model.setAttribute("sections", data_list)
+        gmsh.model.setAttribute("Sections", data_list)
         data_list = self.materials.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
-        gmsh.model.setAttribute("materials", data_list)
+        gmsh.model.setAttribute("Materials", data_list)
 
         # SAVE GEOMETRIC DATA
         gmsh.write(filename)
@@ -1568,9 +1580,8 @@ class xfemStruct:
                 gmsh.view.addHomogeneousModelData(
                     view, 0, modelname, "NodeData", values["point"].values, values[idof].values)
                 gmsh.view.option.setNumber(view, "Visible", 0)
-                
-                # gmsh.view.write(view, filename, append=True)
 
+                # gmsh.view.write(view, filename, append=True)
 
         if DEBUG:
             logging.debug(f"Execution time: {round((timeit.default_timer() - starttime)*1000,3)} ms")
@@ -1579,7 +1590,7 @@ class xfemStruct:
         gmsh.option.setNumber("Mesh.SaveAll", 1)
         size = gmsh.model.getBoundingBox(2, 1)
         gmsh.finalize()
-        
+
         # run_gmsh(filename)
 
         return
@@ -1587,7 +1598,11 @@ class xfemStruct:
     @property
     def file_name(self):
         return self._filename
-    
+
+    @property
+    def title(self):
+        return self._title
+
     @file_name.setter
     def file_name(self, filename: str):
         path = Path(filename)

@@ -3,13 +3,13 @@ import os
 import logging
 import pathlib
 import src
-from src import sap2000handler
-from src import ofem
+from src.ofempy import sap2000handler
+from src.ofempy import ofem
 from pathlib import Path
 
 #fname = os.path.join( os.getcwd(), "tests/test.s2k")
 fname = os.path.join( os.getcwd(), "tests/test.xlsx")
-s2000 = src.Reader(fname)
+s2000 = src.ofempy.Reader(fname)
 # s2000.to_femix()
 # fname = os.path.join( os.getcwd(), "test.xlsx")
 # s2000.read_excel(fname, 'pandas')

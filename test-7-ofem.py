@@ -1,14 +1,14 @@
 import os
 import logging
-from src.xfemmesh import xfemStruct
-import src.xfemmesh as xfemmesh
-import src.ofem as ofem
-import src.sap2000handler as sap2000handler
+from src.ofempy.xfemmesh import xfemStruct
+import src.ofempy.xfemmesh as xfemmesh
+import src.ofempy.ofem as ofem
+import src.ofempy.sap2000handler as sap2000handler
 import shutil
 from pathlib import Path
 import pandas as pd
 import gmsh
-import src.decorators
+import src.ofempy.decorators
 
 logging.basicConfig(level=logging.DEBUG)
 logging.debug("Test started.\n")
@@ -33,7 +33,7 @@ ofile.save(xfile)
 
 shutil.copyfile(xfile, xfile + ".zip")
 
-ofile.to_gmsh(xfile)
+ofile.export_msh(xfile)
 path = Path(xfile)
 filename = str(path.parent / (path.stem + ".msh"))
 xfemmesh.run_gmsh(filename)

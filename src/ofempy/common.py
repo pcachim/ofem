@@ -26,6 +26,12 @@ gmsh_colors = {
     "type": 0
 }
 
+gmsh_ofem_types = {
+    0: "point",
+    1: "line",
+    2: "area",
+    3: "solid"}
+
 ofem_meshio = {
     "point": "vertex",
     "line2": "line",
@@ -47,6 +53,27 @@ ofem_meshio = {
     "solid27": "hexahedron27"  # not working
 }
 meshio_ofem = {v: k for k, v in ofem_meshio.items()}
+
+ofem_basic = {
+    "point": "point",
+    "line2": "line",
+    "line3": "line",
+    "area3": "area",
+    "area4": "area",
+    "area6": "area", # not working
+    "area8": "area",
+    "area9": "area",
+    "area10": "area", # not working
+    "solid4": "solid",
+    "solid5": "solid", # not working
+    "solid6": "solid", # not working
+    "solid8": "solid",
+    "solid10": "solid", # not working
+    "solid14": "solid", # not working
+    "solid18": "solid", # not working
+    "solid20": "solid",
+    "solid27": "solid"  # not working
+}
 
 ofem_gmsh = {
     "point": 15,
