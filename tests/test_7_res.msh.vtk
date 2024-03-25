@@ -1,5 +1,5 @@
 # vtk DataFile Version 2.0
-test_7 - title stucture, Created by Gmsh 4.12.2 
+test_7_res - title stucture, Created by Gmsh 4.12.2 
 ASCII
 DATASET UNSTRUCTURED_GRID
 POINTS 264 double

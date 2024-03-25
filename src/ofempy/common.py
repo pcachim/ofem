@@ -19,6 +19,11 @@ ROTATION = 1001
 HOR_ROT = 1101
 VER_ROT = 1011
 
+ofem_points = ['point']
+ofem_lines = ['line2', 'line3']
+ofem_areas = ['area3', 'area4', 'area6', 'area8', 'area9', 'area10']
+ofem_solids = ['solid4', 'solid5', 'solid6', 'solid8', 'solid10', 'solid14', 'solid18', 'solid20', 'solid27']
+
 # gmsh color codes
 gmsh_colors = {
     "entity": 1,

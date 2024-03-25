@@ -33,9 +33,9 @@ ofile.save(xfile)
 
 shutil.copyfile(xfile, xfile + ".zip")
 
-ofile.export_msh(xfile)
+ofile.export_msh_results(xfile)
 path = Path(xfile)
-filename = str(path.parent / (path.stem + ".msh"))
+filename = str(path.parent / (path.stem + "_res.msh"))
 xfemmesh.run_gmsh(filename)
 
 #s2000.to_msh_and_open(entities='sections', physicals='sections')

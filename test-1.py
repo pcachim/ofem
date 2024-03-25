@@ -3,8 +3,8 @@ import os
 import logging
 import pathlib
 import src
-from src import sap2000handler
-from src import ofem
+from src.ofempy import sap2000handler
+from src.ofempy import ofem
 from pathlib import Path
 
 

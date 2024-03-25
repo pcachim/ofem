@@ -89,7 +89,23 @@ class Reader:
                 df.loc[:, ['ux', 'uy', 'uz', 'rx', 'ry', 'rz']] = digit_list
                 self.ofem.supports = pd.concat([self.ofem.supports, df])
                 ### verrificar se há nós repetidos
-                
+
+        # GROUPS
+        # entities = gmsh.model.getEntities()
+        # for ent in entities:
+        #     dim = ent[0]
+        #     tag = ent[1]
+
+        #     elemypes, elemTags, elemNodes  = gmsh.model.mesh.getElements(dim, tag)
+        #     elements =[np.array(elements[i][1]) for i in range(len(elements))]
+        #     elements = np.concatenate(elements, axis=None).tolist()
+        #     df = pd.DataFrame({'tag': elements})
+        #     df['group'] = 'group: ' + str(dim) + '-' + str(tag)
+        #     df['type'] = common.gmsh_ofem_types[dim]
+        #     df.loc[:, 'tag'] = common.gmsh_ofem_types[dim] + '-' + df.loc[:,['tag']]
+
+        #     self.ofem.groups = pd.concat([self.ofem.groups, df])
+
         # SECTION PROPERTIES
         if "Sections" in attributes:
             sections = gmsh.model.get_attribute("Sections")

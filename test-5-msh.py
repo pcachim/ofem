@@ -19,9 +19,11 @@ logging.debug("\n\nWrting gmsh.\n")
 
 gmsh.initialize(sys.argv)
 
+gmsh.option.setNumber("Mesh.Nodes", 1)
+gmsh.option.setNumber("Mesh.NodeSize", 8)
 gmsh.option.setNumber("Mesh.Lines", 1)
-gmsh.option.setNumber("Mesh.SurfaceFaces", 1)
 gmsh.option.setNumber("Mesh.LineWidth", 5)
+gmsh.option.setNumber("Mesh.SurfaceFaces", 1)
 gmsh.option.setNumber("Mesh.ColorCarousel", common.gmsh_colors['physical'])
 
 gmsh.open(fname + ".msh")
