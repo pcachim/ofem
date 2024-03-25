@@ -236,8 +236,8 @@ $Elements
 102 42 35 52 
 $EndElements
 $Materials
-concrete, nan, 30000000.0, 0.2, 25.0, 1e-05, 12500000.0
-steel, nan, 200000000.0, 0.30000000000000004, 77.0, 1e-05, 12500000.0
+concrete, isotropic, 30000000.0, 0.2, 25.0, 1e-05, 12500000.0
+steel, isotropic, 200000000.0, 0.30000000000000004, 77.0, 1e-05, 12500000.0
 $EndMaterials
 $Sections
 beam, line, steel, 0.15, 0.003, 0.001, 1e-06, 0.0, 0.0, nan

@@ -1,7 +1,6 @@
 DEBUG = False
 
 from . import common
-from . import sap2000handler
 from .ofem.libofempy import OfemSolverFile
 from . import ofem
 from dataclasses import dataclass, field
@@ -1088,7 +1087,7 @@ class xfemStruct:
                     file.write("### (Young modulus, Poisson ratio, mass/volume and thermic coeff.\n")
                     file.write("# imats         young        poiss        dense        alpha\n")
                     file.write("  %5d  %16.8f %16.8f %16.8f %16.8f\n" % 
-                        (imat, mat.young, mat.poisson, mat.weight, mat.alpha))
+                        (imat, mat.young, mat.poisson, mat.weight, mat.thermal))
                 elif mtype == "spring":
                     file.write("### (Young modulus, Poisson ratio, mass/volume and thermic coeff.\n")
                     file.write("# imats         stifn        stift-1        stift-2\n")
@@ -1234,7 +1233,8 @@ class xfemStruct:
                 count = 1
                 for poin, values in cases[case]["point"].items():
                     file.write(" %5d %5d  " % (count, self.points.at[str(poin), 'id']))
-                    file.write(" %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f" % cases[case]["poin"])
+                    file.write(" %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f" % 
+                            (values[0], values[1], values[2], values[3], values[4], values[5]))
                     file.write("\n")
                     count += 1
 
@@ -1330,15 +1330,11 @@ class xfemStruct:
 
         self.to_ofempy(filename + ".ofem")
         ofem.solve(filename + ".ofem")
-    
+
         options = ofem.OfemOptions().get()
         codes = ofem.OutputOptions.all()
         ofem.results(filename + ".ofem", codes, **options)
 
-        # self._results.add("displacements", ofem.get_csv_from_ofem(filename, ofem.libofempy.DI_CSV))    
-        # self._results.add("reactions", ofem.get_csv_from_ofem(filename, ofem.libofempy.RE_CSV))
-        # self._results.add("stresses_avg", ofem.get_csv_from_ofem(filename, ofem.libofempy.AST_CSV))
-        # self._results.add("stresses_eln", ofem.get_csv_from_ofem(filename, ofem.libofempy.EST_CSV))
         point_map = dict(zip(self.mesh.points['id'], self.mesh.points['point']))
         element_map = dict(zip(self.mesh.elements['id'], self.mesh.elements['element']))
 

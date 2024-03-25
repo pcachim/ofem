@@ -6,20 +6,22 @@ with the following features:
 - sap2000: reads SAP2000 files.
 """
 
-__version__ = "2024.3.1"
+__version__ = "2024.3.2"
 
 from . import xfemmesh
 from . import ofem
-from . import sap2000handler
+from . import adapters
 from .xfemmesh import xfemMesh, xfemStruct, xfemData
 # from .pyfiles import femixhandler
 # from . import meshstruct
 from . import pyfem
 # from .femixhandler import femix_handler
 
-from . import sap2000handler
-from .sap2000handler import Reader
+# from . import sap2000handler
+# from .sap2000handler import Reader
+from .adapters import sap2000
+from .adapters import msh
 
-from .gmshhandler import GmshHandler
+# from .gmshhandler import GmshHandler
 from .meshstruct import Slab, Beam
 # from .ofemstructfile import OfemStructFile

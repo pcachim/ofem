@@ -266,8 +266,8 @@ $LoadCases
 {'case': 'T', 'type': 'temp', 'gravity': 0}
 $EndLoadCases
 $Materials
-{'material': 'concrete', 'young': 30000000.0, 'poisson': 0.2, 'weight': 25.0, 'thermal': 1e-05, 'shear': 12500000.0}
-{'material': 'steel', 'young': 200000000.0, 'poisson': 0.3, 'weight': 77.0, 'thermal': 1e-05, 'shear': 12500000.0}
+{'material': 'concrete', 'type': 'isotropic', 'young': 30000000.0, 'poisson': 0.2, 'weight': 25.0, 'thermal': 1e-05, 'shear': 12500000.0}
+{'material': 'steel', 'type': 'isotropic', 'young': 200000000.0, 'poisson': 0.3, 'weight': 77.0, 'thermal': 1e-05, 'shear': 12500000.0}
 $EndMaterials
 $PointLoads
 {'point': 1, 'loadcase': 'DEAD', 'fx': 0.0, 'fy': 0.0, 'fz': -100.0, 'mx': 0.0, 'my': 0.0, 'mz': 0.0}

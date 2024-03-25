@@ -1039,13 +1039,13 @@ class Reader:
         # MATERIALS
         df = material.rename(columns={"Material": "material",                                         
             "E1": "young", "U12": "poisson", "G12": "shear", 
-            "UnitMass": "mass", "UnitWeight": "weight", "A1": "alpha"})
+            "UnitMass": "mass", "UnitWeight": "weight", "A1": "thermal"})
         df.loc[:, 'damping'] = 0.02
         df.loc[:, 'type'] = "isotropic"
-        df.loc[:, ['young', 'poisson', 'mass', 'shear', 'damping', 'alpha', 'weight']] = df.loc[:, 
-                ['young', 'poisson', 'mass', 'shear', 'damping', 'alpha', 'weight']].astype(float)
+        df.loc[:, ['young', 'poisson', 'mass', 'shear', 'damping', 'thermal', 'weight']] = df.loc[:, 
+                ['young', 'poisson', 'mass', 'shear', 'damping', 'thermal', 'weight']].astype(float)
         self.ofem.materials = pd.concat([self.ofem.materials, 
-            df[['material', 'type', 'young', 'poisson', 'mass', 'shear', 'damping', 'alpha', 'weight']]])
+            df[['material', 'type', 'young', 'poisson', 'mass', 'shear', 'damping', 'thermal', 'weight']]])
 
         # SUPPORTS
         supports = self.s2k['Joint Restraint Assignments'.upper()]

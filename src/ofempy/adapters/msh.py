@@ -40,6 +40,7 @@ class Reader:
             "z": nodeTags[1][2::3]
         }
         self.ofem.points = pd.DataFrame(coordinates)
+        self.ofem.points["point"] = self.ofem.points["point"].astype(str)
 
         # ELEMENTS
         for i, etype in enumerate(elementTypes):
@@ -55,7 +56,9 @@ class Reader:
             elements = {f"node{j+1}": elementNodeTags[i][j::ofem_nnodes] for j in range(0, ofem_nnodes)}
             elements["element"] = np.array(elementTags[i])
             df = pd.DataFrame(elements)
-            df["element"] = df["element"].astype(str)
+            # df["element"] = df["element"].astype(str)
+            cols = ["element"] + [col for col in df.columns if col.startswith('node')]
+            df[cols] = df[cols].astype(str)
             df.loc[:, 'element'] = common.ofem_basic[ofem_etype] + '-' + df.loc[:,['element']]
             df['type'] = ofem_etype
             self.ofem.elements = pd.concat([self.ofem.elements, df])
@@ -90,22 +93,6 @@ class Reader:
                 self.ofem.supports = pd.concat([self.ofem.supports, df])
                 ### verrificar se há nós repetidos
 
-        # GROUPS
-        # entities = gmsh.model.getEntities()
-        # for ent in entities:
-        #     dim = ent[0]
-        #     tag = ent[1]
-
-        #     elemypes, elemTags, elemNodes  = gmsh.model.mesh.getElements(dim, tag)
-        #     elements =[np.array(elements[i][1]) for i in range(len(elements))]
-        #     elements = np.concatenate(elements, axis=None).tolist()
-        #     df = pd.DataFrame({'tag': elements})
-        #     df['group'] = 'group: ' + str(dim) + '-' + str(tag)
-        #     df['type'] = common.gmsh_ofem_types[dim]
-        #     df.loc[:, 'tag'] = common.gmsh_ofem_types[dim] + '-' + df.loc[:,['tag']]
-
-        #     self.ofem.groups = pd.concat([self.ofem.groups, df])
-
         # SECTION PROPERTIES
         if "Sections" in attributes:
             sections = gmsh.model.get_attribute("Sections")
@@ -128,7 +115,7 @@ class Reader:
 
         # LOAD CASES
         if "LoadCases" in attributes:
-            loadCases = gmsh.model.get_attribute("Loadcases")
+            loadCases = gmsh.model.get_attribute("LoadCases")
             _list = [json.loads(sec.replace("'", "\"")) for sec in loadCases]
 
             json_buffer = io.BytesIO(json.dumps(_list).encode())
@@ -147,28 +134,36 @@ class Reader:
             self.ofem.point_loads = pd.concat([self.ofem.point_loads, df])
 
         # LINE LOADS
+        ### buscar os elementos na tabela de entidades
         if "LineLoads" in attributes:
             lineLoads = gmsh.model.get_attribute("LineLoads")
             _list = [json.loads(sec.replace("'", "\"")) for sec in lineLoads]
-
-            json_buffer = io.BytesIO(json.dumps(_list).encode())
-            json_buffer.seek(0)
-            df = pd.read_json(json_buffer, orient='records')
-            df["element"] = df["element"].astype(str)
-            df.loc[:, 'element'] = common.gmsh_ofem_types[1] + '-' + df.loc[:,['element']]
-            self.ofem.line_loads = pd.concat([self.ofem.line_loads, df])
+            
+            for i, sec in enumerate(_list):
+                tag = int(sec['element'])
+                elems = gmsh.model.mesh.getElements(1, tag)[1][0].tolist()
+                df = pd.DataFrame({'element': elems})
+                df["element"] = df["element"].astype(str)
+                df['direction'] = 'local'
+                df.loc[:, 'element'] = common.gmsh_ofem_types[1] + '-' + df.loc[:,['element']]
+                for key in ['loadcase', 'fx', 'fy', 'fz', 'mx']:
+                    df[key] = sec[key]                
+                self.ofem.line_loads = pd.concat([self.ofem.line_loads, df])
 
         # AREA LOADS
         if "AreaLoads" in attributes:
             areaLoads = gmsh.model.get_attribute("AreaLoads")
             _list = [json.loads(sec.replace("'", "\"")) for sec in areaLoads]
-
-            json_buffer = io.BytesIO(json.dumps(_list).encode())
-            json_buffer.seek(0)
-            df = pd.read_json(json_buffer, orient='records')
-            df["element"] = df["element"].astype(str)
-            df.loc[:, 'element'] = common.gmsh_ofem_types[2] + '-' + df.loc[:,['element']]
-            self.ofem.area_loads = pd.concat([self.ofem.area_loads, df])
-            # alterar nome de 'line' para 'element'
+            
+            for i, sec in enumerate(_list):
+                tag = int(sec['element'])
+                elems = gmsh.model.mesh.getElements(2, tag)[1][0].tolist()
+                df = pd.DataFrame({'element': elems})
+                df["element"] = df["element"].astype(str)
+                df['direction'] = 'local'
+                df.loc[:, 'element'] = common.gmsh_ofem_types[2] + '-' + df.loc[:,['element']]
+                for key in ['loadcase', 'px', 'py', 'pz']:
+                    df[key] = sec[key]                
+                self.ofem.area_loads = pd.concat([self.ofem.area_loads, df])
 
         return self.ofem

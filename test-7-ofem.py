@@ -3,7 +3,7 @@ import logging
 from src.ofempy.xfemmesh import xfemStruct
 import src.ofempy.xfemmesh as xfemmesh
 import src.ofempy.ofem as ofem
-import src.ofempy.sap2000handler as sap2000handler
+import src.ofempy.adapters as sap2000
 import shutil
 from pathlib import Path
 import pandas as pd
@@ -13,16 +13,10 @@ import src.ofempy.decorators
 logging.basicConfig(level=logging.DEBUG)
 logging.debug("Test started.\n")
 
-# print(os.path.expanduser('~/desktop'))
-# print(Path.home())
-
-#fname = os.path.join( os.getcwd(), "tests/test.s2k")
 fname = os.path.join( os.getcwd(), "tests/demo-s2k.s2k")
-ofile = sap2000handler.Reader(fname).to_ofem_struct()
+ofile = sap2000.Reader(fname).to_ofem_struct()
 
 xfile = "tests/test_7.xfem"
-
-logging.debug("\nSaving xfem.\n")
 ofile.save(xfile)
 
 logging.debug("\nStart solving.\n")
