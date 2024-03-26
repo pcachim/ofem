@@ -602,7 +602,7 @@ class xfemStruct:
 
         return
 
-    def write_excel(self, filename: str):
+    def save_excel(self, filename: str):
         path = Path(filename)
         if path.suffix != ".xlsx":
             filename = path.with_suffix(".xlsx")
@@ -631,6 +631,16 @@ class xfemStruct:
                 self._arealoads.to_excel(writer, sheet_name='arealoads', index=False)
             if not self._solidloads.empty:
                 self._solidloads.to_excel(writer, sheet_name='solidloads', index=False)
+            if 'displacements'in self._results.items.keys():
+                self._results.items['displacements'].to_excel(writer, sheet_name='displacements', index=False)
+            if 'reactions' in self._results.items.keys():
+                self._results.items['reactions'].to_excel(writer, sheet_name='reactions', index=False)
+            if 'stresses_avg' in self._results.items.keys():
+                self._results.items['stresses_avg'].to_excel(writer, sheet_name='stresses_avg', index=False)
+            if 'stresses_eln' in self._results.items.keys():
+                self._results.items['stresses_eln'].to_excel(writer, sheet_name='stresses_eln', index=False)
+            if 'stresses_gauss' in self._results.items.keys():
+                self._results.items['stresses_gauss'].to_excel(writer, sheet_name='stresses_gauss', index=False)
         return
 
     def read_xfem(self, filename: str): 
@@ -652,7 +662,7 @@ class xfemStruct:
         self._filename = path.parent / path.stem
         return
 
-    def write_xfem(self, filename: str):
+    def save_xfem(self, filename: str):
         path = Path(filename)
         if path.suffix != ".xfem":
             filename = path.with_suffix(".xfem")
@@ -702,9 +712,9 @@ class xfemStruct:
             file_format = Path(filename).suffix
 
         if file_format == ".xlsx":
-            self.write_excel(filename)
+            self.save_excel(filename)
         elif file_format == ".xfem":
-            self.write_xfem(filename)
+            self.save_xfem(filename)
 
             if DEBUG:
                 logging.debug("\nCCopying 'xfem' file to 'zip' file.\n")
@@ -1379,6 +1389,10 @@ class xfemStruct:
         dt['element'] = dt['element'].map(element_map)
         dt['point'] = dt['point'].map(point_map)
         self._results.add("stresses_eln", dt)
+
+        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.GST_CSV)
+        dt['element'] = dt['element'].map(element_map)
+        self._results.add("stresses_gauss", dt)
 
         if DEBUG:
             logging.debug("\nFinishing calculating results.\n")

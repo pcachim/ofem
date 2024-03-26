@@ -15,6 +15,7 @@ off.save(file_format=".xlsx")
 off.export_msh(fname + ".msh")
 off.solve()
 off.save()
+off.save(file_format=".xlsx")
 off.export_msh_results(fname + ".msh")
 
 logging.debug("\n\nWrting gmsh.\n")
