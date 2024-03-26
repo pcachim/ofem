@@ -30,7 +30,7 @@ class Reader:
         attributes = gmsh.model.getAttributeNames()
 
         self.ofem = xfemmesh.xfemStruct(gmsh.model.get_file_name())
-        self.ofem.filename = self._filename
+        self.ofem.file_name = self._filename
         
         # POINTS
         coordinates = {

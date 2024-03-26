@@ -1,4 +1,4 @@
-DEBUG = False
+DEBUG = True
 
 from . import common
 from .ofem.libofempy import OfemSolverFile
@@ -54,14 +54,18 @@ def replace_bytesio_in_zip(zip_path, target_filename, new_contents):
 
 
 def run_gmsh(s):
-    
+
+    path = Path(s)
+    s = str(path.parent / (path.stem + ".msh"))
+
     gmsh.initialize(sys.argv)
 
     gmsh.option.setNumber("Mesh.Nodes", 1)
     gmsh.option.setNumber("Mesh.NodeSize", 8)
     gmsh.option.setNumber("Mesh.Lines", 1)
     gmsh.option.setNumber("Mesh.LineWidth", 5)
-    gmsh.option.setNumber("Mesh.SurfaceFaces", 1)
+    gmsh.option.setNumber("Mesh.SurfaceFaces", 0)
+    gmsh.option.setNumber("View.Visible", 0)
     gmsh.option.setNumber("Mesh.ColorCarousel", common.gmsh_colors['physical'])
 
     gmsh.open(s)
@@ -676,7 +680,19 @@ class xfemStruct:
         self._filename = str(path.parent / path.stem)
         return
     
-    def save(self, filename: str, file_format: str = None):
+    def save(self, filename: str = None, file_format: str = None):
+        if filename == None:
+            if self._filename == None:
+                raise ValueError(f"Filename not provided")
+            if file_format == None or file_format == ".xfem":
+                filename = self._filename + ".xfem"
+                file_format = ".xfem"
+            elif file_format == ".xlsx":
+                filename = self._filename + ".xlsx"
+                file_format = ".xlsx"
+            else:
+                raise ValueError(f"File format {file_format} not recognized")
+
         path = Path(filename)
         
         if path.suffix == "" and file_format == None:
@@ -689,6 +705,10 @@ class xfemStruct:
             self.write_excel(filename)
         elif file_format == ".xfem":
             self.write_xfem(filename)
+
+            if DEBUG:
+                logging.debug("\nCCopying 'xfem' file to 'zip' file.\n")
+                shutil.copyfile(filename, filename + ".zip")
         else:
             raise ValueError(f"File format {file_format} not recognized")
 
@@ -980,8 +1000,8 @@ class xfemStruct:
 
         return cases
 
-    def to_ofempy(self, mesh_file: str):
-        """Writes a ofem file
+    def to_ofem(self, mesh_file: str):
+        """Writes an ofem file
 
         Args:
             mesh_file (str): the name of the file to be written
@@ -1145,9 +1165,16 @@ class xfemStruct:
                         file.write(" %8d" % lnode)
                 else:
                     nodelist = elemen[ self.mesh.get_list_node_columns(etype) ]
-                    for inode in nodelist:
-                        knode = self.mesh.points.at[inode, 'id']  
-                        file.write(" %8d" % knode)
+                    if len(nodelist) == 2:
+                        nodea = self.mesh.points.at[nodelist['node1'], 'id'] 
+                        nodeb = self.mesh.points.at[nodelist['node2'], 'id']
+                        if nodea > nodeb:
+                            nodea, nodeb = nodeb, nodea 
+                        file.write(" %8d %8d" % (nodea, nodeb))
+                    else:
+                        for inode in nodelist:
+                            knode = self.mesh.points.at[inode, 'id']  
+                            file.write(" %8d" % knode)
                 file.write("\n")
 
             file.write("\n")
@@ -1319,8 +1346,6 @@ class xfemStruct:
 
         # ofem_file.add(cmdatname)
 
-        if DEBUG: shutil.copyfile(jobname, jobname + ".zip")
-
         return
 
     def solve(self):
@@ -1328,7 +1353,7 @@ class xfemStruct:
         
         filename = (str(uuid.uuid4()) if self._filename is None else self._filename ) 
 
-        self.to_ofempy(filename + ".ofem")
+        self.to_ofem(filename + ".ofem")
         ofem.solve(filename + ".ofem")
 
         options = ofem.OfemOptions().get()
@@ -1343,13 +1368,13 @@ class xfemStruct:
         self._results.add("displacements", dt)
 
         dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.RE_CSV)
-        dt['kpoin'] = dt['kpoin'].map(point_map)
+        dt['point'] = dt['point'].map(point_map)
         self._results.add("reactions", dt)
-        
+
         dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.AST_CSV)
         dt['point'] = dt['point'].map(point_map)
         self._results.add("stresses_avg", dt)
-        
+
         dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.EST_CSV)
         dt['element'] = dt['element'].map(element_map)
         dt['point'] = dt['point'].map(point_map)
@@ -1357,6 +1382,7 @@ class xfemStruct:
 
         if DEBUG:
             logging.debug("\nFinishing calculating results.\n")
+            logging.debug("\nCCopying 'xfem' file to 'zip' file.\n")
             shutil.copyfile(filename + ".ofem", filename + ".ofem" + ".zip")
 
         return
@@ -1364,7 +1390,7 @@ class xfemStruct:
     def to_meshio(self):
 
         self.mesh._set_tags_to_id(base=0)
-        points = self.mesh.points[["x", "y", "z"]].values.tolist()
+        points = self.mesh.points.sort_values(by='id')[["x", "y", "z"]].values.tolist()
 
         elements = []
         unique_elements = self.mesh.elements["type"].unique()
@@ -1388,11 +1414,40 @@ class xfemStruct:
             elem_data['section'].append(
                 kelems.values.tolist()
             )
+            
+        point_data = {}
+        for i, case in enumerate(self._loadcases.itertuples()):
+            values = self._results.items['displacements'].loc[self._results.items['displacements']['icomb'] == i+1].copy()
+            values.loc[:,'point'] = values.loc[:,'point'].replace(to_replace=self.mesh._nodetag_to_id)
+            values = values.sort_values(by='point')
+            list_of_dof = [col for col in values.columns if col.startswith('disp')]
+            for idof in list_of_dof:
+                key = f'case: {case.case} % {idof}'
+                point_data[key] = values[idof].values
 
-        mesh = meshio.Mesh(
-            points,
-            elements,
-            cell_data=elem_data)
+            values = self._results.items['stresses_avg'].loc[self._results.items['stresses_avg']['icomb'] == i+1]
+            values.loc[:,'point'] = values.loc[:,'point'].replace(to_replace=self.mesh._nodetag_to_id)
+            values = values.sort_values(by='point')
+            list_of_dof = [col for col in values.columns if col.startswith('str')]
+            for idof in list_of_dof:
+                key = f'case: {case.case} % {idof}'
+                point_data[key] = values[idof].values
+
+            # values = self._results.items['stresses_eln'].loc[self._results.items['stresses_eln']['icomb'] == i+1]
+            # list_of_dof = [col for col in values.columns if col.startswith('str')]
+            # elem_list = values[(values['node'] == 1) & (values['icomb'] == i+1)].copy()
+            # elem_list['element'] = elem_list["element"].apply(lambda x: self.mesh._elemtag_to_id[x])
+            # elem_list = elem_list['element'].values
+            # for idof in list_of_dof:
+            #     view = gmsh.view.add(f'{case.case}: eln-{idof}')
+            #     vlist = values[idof].values
+            #     gmsh.view.addHomogeneousModelData(
+            #         view, 0, modelname, "ElementNodeData", elem_list, vlist)
+            #     gmsh.view.option.setNumber(view, "Visible", 0)
+            #     gmsh.view.write(view, filename, append=True)
+
+        mesh = meshio.Mesh(points, elements, cell_data=elem_data ,point_data=point_data, )
+            # #cell_data=elem_data,
         #     # Optionally provide extra data on points, cells, etc.
         #     point_data={"T": [0.3, -1.2, 0.5, 0.7, 0.0, -3.0]},
         #     # Each item in cell data must match the cells array
@@ -1401,14 +1456,15 @@ class xfemStruct:
 
         return mesh
 
-    def export_msh(self, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
+    def export_msh(self, filename: str, model: str = 'geometry', entities: str = 'sections'):
         """Writes a GMSH mesh file and opens it in GMSH
 
         Args:
             filename (str): the name of the file to be written
         """
-        path = Path(mesh_file)
-        filename = str(path.parent / (path.stem + ".msh"))
+        path = Path(filename)
+        if path.suffix != ".msh":
+            filename = str(path.parent / (path.stem + ".msh"))
 
         # process options
         if model not in ['geometry', 'loads']:
@@ -1417,10 +1473,14 @@ class xfemStruct:
         if entities not in ['types', 'sections', 'materials']:
             raise ValueError('entities must be "types", "sections" or "materials"')
 
+        if DEBUG:
+            starttime = timeit.default_timer()
+            logging.info(f"Processing elements ({self.mesh.num_elements})...")
+
         # initialize gmsh
         gmsh.initialize(sys.argv)
 
-        modelname = Path(filename).stem + ' - ' + self._title
+        modelname = Path(filename).stem
         gmsh.model.add(modelname)
         gmsh.model.setFileName(filename)
         
@@ -1429,7 +1489,6 @@ class xfemStruct:
         # SAVE GEOMETRIC DATA
         gmsh.option.setNumber("Mesh.SaveAll", 1)
         gmsh.write(filename)
-        gmsh.write(filename + ".vtk")
 
         if DEBUG:
             logging.debug(f"Execution time: {round((timeit.default_timer() - starttime)*1000,3)} ms")
@@ -1477,10 +1536,6 @@ class xfemStruct:
             )
         areasections = areas['section'].unique()
         areamaterials = areas['material'].unique()
-
-        if DEBUG:
-            starttime = timeit.default_timer()
-            logging.info(f"Processing elements ({self.mesh.num_elements})...")
 
         # JOINTS
         # max_values = joints[['x', 'y', 'z']].max()
@@ -1619,14 +1674,16 @@ class xfemStruct:
 
         return
 
-    def export_msh_results(self, mesh_file, model: str = 'geometry', entities: str = 'sections'):
+    def export_msh_results(self, filename, model: str = 'geometry', entities: str = 'sections',
+                        displacements: bool = True, stresses_avg: bool = False, stresses_eln: bool = False):
         """Writes a GMSH mesh file and opens it in GMSH
 
         Args:
             filename (str): the name of the file to be written
         """
-        path = Path(mesh_file)
-        filename = str(path.parent / (path.stem + "_res.msh"))
+        path = Path(filename)
+        if path.suffix != ".msh":
+            filename = str(path.parent / (path.stem + ".msh"))
 
         # process options
         if model not in ['geometry', 'loads']:
@@ -1638,7 +1695,7 @@ class xfemStruct:
         # initialize gmsh
         gmsh.initialize(sys.argv)
 
-        modelname = Path(filename).stem + ' - ' + self._title
+        modelname = Path(filename).stem
         gmsh.model.add(modelname)
         gmsh.model.setFileName(filename)
 
@@ -1647,25 +1704,53 @@ class xfemStruct:
         gmsh.option.setNumber("Mesh.SaveAll", 1)
         gmsh.write(filename)
 
-        # DATA NODAL
         for i, case in enumerate(self._loadcases.itertuples()):
-            values = self._results.items['displacements'].loc[self._results.items['displacements']['icomb'] == i+1]
-            list_of_dof = [col for col in values.columns if col.startswith('disp')]
-            for idof in list_of_dof:
-                view = gmsh.view.add(f'case: {case.case} % {idof}')
-                gmsh.view.addHomogeneousModelData(
-                    view, 0, modelname, "NodeData", values["point"].values, values[idof].values)
-                gmsh.view.option.setNumber(view, "Visible", 0)
+            # DATA NODAL
+            if displacements:
+                values = self._results.items['displacements'].loc[self._results.items['displacements']['icomb'] == i+1]
+                list_of_dof = [col for col in values.columns if col.startswith('disp')]
+                for idof in list_of_dof:
+                    view = gmsh.view.add(f'{case.case}: {idof}')
+                    gmsh.view.addHomogeneousModelData(
+                        view, 0, modelname, "NodeData", values["point"].values, values[idof].values)
+                    gmsh.view.option.setNumber(view, "Visible", 0)
+                    gmsh.view.write(view, filename, append=True)
 
-                gmsh.view.write(view, filename, append=True)
+            if stresses_avg:
+                values = self._results.items['stresses_avg'].loc[self._results.items['stresses_avg']['icomb'] == i+1]
+                list_of_dof = [col for col in values.columns if col.startswith('str')]
+                for idof in list_of_dof:
+                    view = gmsh.view.add(f'{case.case}: avg-{idof}')
+                    gmsh.view.addHomogeneousModelData(view, 0, modelname, "NodeData", values["point"].values, values[idof].values)
+                    gmsh.view.option.setNumber(view, "Visible", 0)
+                    gmsh.view.write(view, filename, append=True)
 
-        gmsh.write(filename + ".vtk")
+                # DATA ELEMENTS
+            if stresses_eln:
+                values = self._results.items['stresses_eln'].loc[self._results.items['stresses_eln']['icomb'] == i+1]
+                list_of_dof = [col for col in values.columns if col.startswith('str')]
+                elem_list = values[(values['node'] == 1) & (values['icomb'] == i+1)].copy()
+                elem_list['element'] = elem_list["element"].apply(lambda x: self.mesh._elemtag_to_id[x])
+                elem_list = elem_list['element'].values
+                for idof in list_of_dof:
+                    view = gmsh.view.add(f'{case.case}: eln-{idof}')
+                    vlist = values[idof].values
+                    gmsh.view.addHomogeneousModelData(
+                        view, 0, modelname, "ElementNodeData", elem_list, vlist)
+                    gmsh.view.option.setNumber(view, "Visible", 0)
+                    gmsh.view.write(view, filename, append=True)
 
         # gmsh.fltk.run()
         gmsh.finalize()
 
-        return
+        mesh = meshio.read(filename)
         
+        mesh = self.to_meshio()
+        filename = str(path.parent / (path.stem + ".vtu"))  
+        meshio.write(filename, mesh, file_format="vtu", binary=True)
+
+        return
+
     @property
     def file_name(self):
         return self._filename
@@ -1674,6 +1759,10 @@ class xfemStruct:
     def title(self):
         return self._title
 
+    @property
+    def file_name(self):
+        return self._filename
+        
     @file_name.setter
     def file_name(self, filename: str):
         path = Path(filename)

@@ -166,7 +166,7 @@ meshio_gmsh = {
     "triangle10": 18
 }
 gmsh_meshio = {v: k for k, v in meshio_gmsh.items()}
-
+ 
 ofem_femix = {
     # ntype, nnode, nsec, gaussq, ngaus, gausqst, ngausqst, 
     "point": (0, 1, 0, 0, 0, 0, 0),
