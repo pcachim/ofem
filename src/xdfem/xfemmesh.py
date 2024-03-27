@@ -126,7 +126,7 @@ class xfemMesh:
                 file_format = ".msh"
                 filename += file_format
 
-        if file_format == ".xfem":
+        if file_format == ".xdfem":
             self._to_ofem(filename)
         elif file_format == '.msh':
             self.write_gmsh(filename)
@@ -155,7 +155,7 @@ class xfemMesh:
 
     def read_xfem(self, filename: str): 
         path = Path(filename)
-        if path.suffix != ".xfem":
+        if path.suffix != ".xdfem":
             raise ValueError(f"File {filename} is not a .xfem file")
 
         with zipfile.ZipFile(filename, 'r') as zip_file:
@@ -173,7 +173,7 @@ class xfemMesh:
 
         if file_format == ".xlsx":
             self.read_excel(filename)
-        elif file_format == ".xfem":
+        elif file_format == ".xdfem":
             self.read_xfem(filename)
         else:
             raise ValueError(f"File format {file_format} not recognized")
@@ -224,8 +224,8 @@ class xfemMesh:
 
     def write_xfem(self, filename: str):
         path = Path(filename)
-        if path.suffix != ".xfem":
-            filename = path.with_suffix(".xfem")
+        if path.suffix != ".xdfem":
+            filename = path.with_suffix(".xdfem")
 
         files = self.to_dict()
         json_data = json.dumps(files, indent=2).replace('NaN', 'null')
@@ -645,7 +645,7 @@ class xfemStruct:
 
     def read_xfem(self, filename: str): 
         path = Path(filename)
-        if path.suffix != ".xfem":
+        if path.suffix != ".xdfem":
             raise ValueError(f"File {filename} is not a .xfem file")
 
         with zipfile.ZipFile(filename, 'r') as zip_file:
@@ -664,8 +664,8 @@ class xfemStruct:
 
     def save_xfem(self, filename: str):
         path = Path(filename)
-        if path.suffix != ".xfem":
-            filename = path.with_suffix(".xfem")
+        if path.suffix != ".xdfem":
+            filename = path.with_suffix(".xdfem")
 
         self.mesh.write_xfem(filename)
 
@@ -694,9 +694,9 @@ class xfemStruct:
         if filename == None:
             if self._filename == None:
                 raise ValueError(f"Filename not provided")
-            if file_format == None or file_format == ".xfem":
-                filename = self._filename + ".xfem"
-                file_format = ".xfem"
+            if file_format == None or file_format == ".xdfem":
+                filename = self._filename + ".xdfem"
+                file_format = ".xdfem"
             elif file_format == ".xlsx":
                 filename = self._filename + ".xlsx"
                 file_format = ".xlsx"
@@ -713,7 +713,7 @@ class xfemStruct:
 
         if file_format == ".xlsx":
             self.save_excel(filename)
-        elif file_format == ".xfem":
+        elif file_format == ".xdfem":
             self.save_xfem(filename)
 
             if DEBUG:
@@ -731,7 +731,7 @@ class xfemStruct:
 
         if file_format == ".xlsx":
             self.read_excel(filename)
-        elif file_format == ".xfem":
+        elif file_format == ".xdfem":
             self.read_xfem(filename)
         else:
             raise ValueError(f"File format {file_format} not recognized")
@@ -1821,7 +1821,7 @@ class xfemData:
 
     def read_xfem(self, filename: str): 
         path = Path(filename)
-        if path.suffix != ".xfem":
+        if path.suffix != ".xdfem":
             raise ValueError(f"File {filename} is not a .xfem file")
 
         with zipfile.ZipFile(filename, 'r') as zip_file:
@@ -1836,7 +1836,7 @@ class xfemData:
         if file_format == None:
             file_format = Path(filename).suffix
 
-        if file_format == ".xfem":
+        if file_format == ".xdfem":
             self.read_xfem(filename)
         else:
             raise ValueError(f"File format {file_format} not recognized")
@@ -1853,7 +1853,7 @@ class xfemData:
 
         if file_format == ".xlsx":
             self.write_excel(filename)
-        elif file_format == ".xfem":
+        elif file_format == ".xdfem":
             self.write_xfem(filename)
         else:
             raise ValueError(f"File format {file_format} not recognized")
@@ -1873,8 +1873,8 @@ class xfemData:
 
     def write_xfem(self, filename: str):
         path = Path(filename)
-        if path.suffix != ".xfem":
-            filename = path.with_suffix(".xfem")
+        if path.suffix != ".xdfem":
+            filename = path.with_suffix(".xdfem")
 
         files = self._to_dict()
         json_data = json.dumps(files, indent=2).replace('NaN', 'null')
@@ -1891,7 +1891,7 @@ class xfemData:
         else:
             with zipfile.ZipFile(filename, 'w') as zip_file:
                 zip_file.writestr('data.json', json_buffer.read().decode('utf-8'))    
-            
+
         return
     
     def _to_dict(self):

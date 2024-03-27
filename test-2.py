@@ -1,8 +1,8 @@
 import os
 import logging
-from src.xfemmesh import xfemStruct
-import src.ofem as ofem
-import src.sap2000handler as sap2000handler
+from src.xdfem.xfemmesh import xfemStruct
+import src.xdfem.ofem as ofem
+import src.xdfem.adapters.sap2000 as sap2000handler
 import shutil
 from pathlib import Path
 import pandas as pd
@@ -19,7 +19,7 @@ fname = os.path.join( os.getcwd(), "tests/demo-s2k.s2k")
 
 off = sap2000handler.Reader(fname).to_ofem_struct()
 logging.debug("\nSaving xfem.\n")
-off.save("tests/test_2.xfem")
+off.save("tests/test_2.xdfem")
 
 logging.debug("\nWriting ofem.\n")
 hand = xfemStruct.to_ofempy(off, "tests/test_2.ofem")

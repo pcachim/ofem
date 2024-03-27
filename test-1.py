@@ -3,7 +3,7 @@ import os
 import logging
 import pathlib
 import src
-from src.ofempy import ofem
+from src.xdfem import ofem
 from pathlib import Path
 
 

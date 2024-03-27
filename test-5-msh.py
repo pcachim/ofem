@@ -1,8 +1,8 @@
 import os
 import logging
-from src.ofempy.adapters import msh
-from src.ofempy import xfemmesh
-from src.ofempy import common
+from src.xdfem.adapters import msh
+from src.xdfem import xfemmesh
+from src.xdfem import common
 from pathlib import Path
 import pandas as pd
 import gmsh, sys

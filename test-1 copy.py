@@ -3,8 +3,8 @@ import os
 import logging
 import pathlib
 import src
-from src.ofempy import sap2000handler
-from src.ofempy import ofem
+from src.xdfem import sap2000handler
+from src.xdfem import ofem
 from pathlib import Path
 
 #fname = os.path.join( os.getcwd(), "tests/test.s2k")

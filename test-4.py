@@ -1,7 +1,7 @@
 import os
 import logging
-from src.ofempy import libofempy, Handler, sap2000handler, common, xfemmesh
-import src.ofempy
+from src.xdfem import libofempy, Handler, sap2000handler, common, xfemmesh
+import src.xdfem
 from pathlib import Path
 import pandas as pd
 import gmsh, sys
