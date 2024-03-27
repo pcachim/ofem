@@ -97,6 +97,72 @@ class xfemMesh:
             self._elemtag_to_id = dict(zip(self._elements["element"].values, np.arange(base, self.num_elements+base)))
         return
 
+    def add_node(self, tag: Union[int, str], x: float, y: float, z: float):
+        tag = str(tag)
+        if tag in self._points["point"].values:
+            raise ValueError(f"Node with tag {tag} already exists")
+        node = pd.DataFrame({"point": [tag], "x": [x], "y": [y], "z": [z]})
+        self._points = pd.concat([self._points, node], ignore_index=True)
+        self._dirtypoints = True
+        return
+
+    def add_nodes(self, tags: list, points: list):
+        tags = list(map(str, tags))
+        if len(tags) != len(points):
+            raise ValueError(f"Number of tags and number of coordinates must be the same")
+        for tag, coord in zip(tags, points):
+            self.add_node(tag, *coord)
+        self._dirtypoints = True
+        return
+
+    def add_element(self, tag: Union[int, str], elemtype: str, nodes: list):
+        tag = str(tag)
+        if tag in self._elements["element"].values:
+            raise ValueError(f"Element with tag {tag} already exists")
+        if elemtype not in elemtypes:
+            raise ValueError(f"Element type {elemtype} not recognized")
+        nnodes = common.ofem_nnodes[elemtype]
+        if len(nodes) != nnodes:
+            raise ValueError(f"Element type {elemtype} requires {nnodes} nodes")
+        node_values = self._points["point"].values
+        nodes = list(map(str, nodes))
+        for node in nodes:
+            if node not in node_values:
+                raise ValueError(f"Node with tag {node} does not exist")
+
+        element = pd.DataFrame({"element": [tag], "type": [elemtype]})
+        element = pd.concat([element, pd.DataFrame([nodes], columns=self.get_list_node_columns(elemtype))], axis=1)
+        self._elements = pd.concat([self._elements, element], ignore_index=True)
+        self._dirtyelements = True
+        return
+
+    def add_elements_by_type(self, elemtype: str, tags: list, nodes: list):
+        tags = list(map(str, tags))
+        if elemtype not in elemtypes:
+            raise ValueError(f"Element type {elemtype} not recognized")
+        nnodes = common.ofem_nnodes[elemtype]
+        if len(tags) != len(nodes):
+            raise ValueError(f"Number of tags and number of nodes must be the same")
+        for tag, node in zip(tags, nodes):
+            self.add_element(tag, elemtype, node)
+        self._dirtyelements = True
+        return
+
+    def from_dict(self, ofem_dict: dict):
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["points"]).encode())
+        json_buffer.seek(0)
+        self._points = pd.read_json(json_buffer, orient='records')
+        self._dirtypoints = True
+        json_buffer = io.BytesIO(json.dumps(ofem_dict["elements"]).encode())
+        json_buffer.seek(0)
+        self._elements = pd.read_json(json_buffer, orient='records')
+        self._dirtyelements = True
+        return
+
+    def get_list_node_columns(self, elemtype: str):
+        nnodes = common.ofem_nnodes[elemtype]
+        return [f"node{i}" for i in range(1, nnodes+1)]
+
     def set_points_elems_id(self, base: int = 1):
         self._set_tags_to_id(base)     
         self._points["id"] = self._points["point"].apply(lambda x: self._nodetag_to_id[x])
@@ -104,10 +170,6 @@ class xfemMesh:
         self._dirtypoints = False
         self._dirtyelements = False
         return 
-
-    def get_list_node_columns(self, elemtype: str):
-        nnodes = common.ofem_nnodes[elemtype]
-        return [f"node{i}" for i in range(1, nnodes+1)]
 
     def set_indexes(self):
         # if self._dirtyelements:
@@ -131,13 +193,13 @@ class xfemMesh:
         elif file_format == '.msh':
             self.write_gmsh(filename)
         elif file_format == ".vtk" or file_format == ".vtu":
-            msh = self._to_meshio()
+            msh = self.to_meshio()
             msh.write(filename, file_format="vtk", binary=False)
         else:
             raise ValueError(f"File format {file_format} not recognized")
         return
 
-    def read_excel(self, filename: str):
+    def save_excel(self, filename: str):
         dfs = pd.read_excel(filename, sheet_name=None)
         
         # coordinates
@@ -153,7 +215,7 @@ class xfemMesh:
         self._dirtyelements = True
         return
 
-    def read_xfem(self, filename: str): 
+    def save_xdfem(self, filename: str): 
         path = Path(filename)
         if path.suffix != ".xdfem":
             raise ValueError(f"File {filename} is not a .xfem file")
@@ -172,9 +234,9 @@ class xfemMesh:
             file_format = Path(filename).suffix
 
         if file_format == ".xlsx":
-            self.read_excel(filename)
+            self.save_excel(filename)
         elif file_format == ".xdfem":
-            self.read_xfem(filename)
+            self.save_xdfem(filename)
         else:
             raise ValueError(f"File format {file_format} not recognized")
         return
@@ -185,18 +247,7 @@ class xfemMesh:
             "elements": self._elements.to_dict(orient="records"), 
         }
 
-    def from_dict(self, ofem_dict: dict):
-        json_buffer = io.BytesIO(json.dumps(ofem_dict["points"]).encode())
-        json_buffer.seek(0)
-        self._points = pd.read_json(json_buffer, orient='records')
-        self._dirtypoints = True
-        json_buffer = io.BytesIO(json.dumps(ofem_dict["elements"]).encode())
-        json_buffer.seek(0)
-        self._elements = pd.read_json(json_buffer, orient='records')
-        self._dirtyelements = True
-        return
-
-    def _to_meshio(self):
+    def to_meshio(self):
 
         self._set_tags_to_id(base=0)
         points = self._points[["x", "y", "z"]].values.tolist()
@@ -222,7 +273,7 @@ class xfemMesh:
 
         return mesh
 
-    def write_xfem(self, filename: str):
+    def write_xdfem(self, filename: str):
         path = Path(filename)
         if path.suffix != ".xdfem":
             filename = path.with_suffix(".xdfem")
@@ -279,57 +330,6 @@ class xfemMesh:
         gmsh.finalize()
         return
     
-    def add_node(self, tag: Union[int, str], x: float, y: float, z: float):
-        tag = str(tag)
-        if tag in self._points["point"].values:
-            raise ValueError(f"Node with tag {tag} already exists")
-        node = pd.DataFrame({"point": [tag], "x": [x], "y": [y], "z": [z]})
-        self._points = pd.concat([self._points, node], ignore_index=True)
-        self._dirtypoints = True
-        return
-
-    def add_nodes(self, tags: list, points: list):
-        tags = list(map(str, tags))
-        if len(tags) != len(points):
-            raise ValueError(f"Number of tags and number of coordinates must be the same")
-        for tag, coord in zip(tags, points):
-            self.add_node(tag, *coord)
-        self._dirtypoints = True
-        return
-
-    def add_element(self, tag: Union[int, str], elemtype: str, nodes: list):
-        tag = str(tag)
-        if tag in self._elements["element"].values:
-            raise ValueError(f"Element with tag {tag} already exists")
-        if elemtype not in elemtypes:
-            raise ValueError(f"Element type {elemtype} not recognized")
-        nnodes = common.ofem_nnodes[elemtype]
-        if len(nodes) != nnodes:
-            raise ValueError(f"Element type {elemtype} requires {nnodes} nodes")
-        node_values = self._points["point"].values
-        nodes = list(map(str, nodes))
-        for node in nodes:
-            if node not in node_values:
-                raise ValueError(f"Node with tag {node} does not exist")
-
-        element = pd.DataFrame({"element": [tag], "type": [elemtype]})
-        element = pd.concat([element, pd.DataFrame([nodes], columns=self.get_list_node_columns(elemtype))], axis=1)
-        self._elements = pd.concat([self._elements, element], ignore_index=True)
-        self._dirtyelements = True
-        return
-
-    def add_elements_by_type(self, elemtype: str, tags: list, nodes: list):
-        tags = list(map(str, tags))
-        if elemtype not in elemtypes:
-            raise ValueError(f"Element type {elemtype} not recognized")
-        nnodes = common.ofem_nnodes[elemtype]
-        if len(tags) != len(nodes):
-            raise ValueError(f"Number of tags and number of nodes must be the same")
-        for tag, node in zip(tags, nodes):
-            self.add_element(tag, elemtype, node)
-        self._dirtyelements = True
-        return
-
     @property
     def dirty(self):
         return self._dirtypoints and self._dirtyelements
@@ -488,255 +488,6 @@ class xfemStruct:
         self._groups = pd.DataFrame(columns= ["group", "type", "point", "element"])
         return
 
-    def set_indexes(self):
-        if self._dirty[SECTIONS]:
-            self._sections['isection'] = self._sections['section'].copy()
-            self._sections.set_index('isection', inplace=True)
-            self._dirty[SECTIONS] = False
-        if self._dirty[SUPPORTS]:
-            self._supports['isupport'] = self._supports['point'].copy()
-            self._supports.set_index('isupport', inplace=True)
-            self._dirty[SUPPORTS] = False
-        if self._dirty[MATERIALS]:
-            self._materials['imaterial'] = self._materials['material'].copy()
-            self._materials.set_index('imaterial', inplace=True)
-            self._dirty[MATERIALS] = False
-        if self._dirty[ELEMSECTIONS]:
-            self._elemsections['ielement'] = self._elemsections['element'].copy()
-            self._elemsections.set_index('ielement', inplace=True)
-            self._dirty[ELEMSECTIONS] = False
-        if self._dirty[POINTLOADS]:
-            self._pointloads['ipoint'] = self._pointloads['point'].copy()
-            self._pointloads.set_index('ipoint', inplace=True)
-            self._dirty[POINTLOADS] = False
-        if self._dirty[LINELOADS]:
-            self._lineloads['ielement'] = self._lineloads['element'].copy()
-            self._lineloads.set_index('ielement', inplace=True)
-            self._dirty[LINELOADS] = False
-        if self._dirty[AREALOADS]:
-            self._arealoads['ielement'] = self._arealoads['element'].copy()
-            self._arealoads.set_index('ielement', inplace=True)
-            self._dirty[AREALOADS] = False
-        if self._dirty[SOLIDLOADS]:
-            self._solidloads['ielement'] = self._solidloads['element'].copy()
-            self._solidloads.set_index('ielement', inplace=True)
-            self._dirty[SOLIDLOADS] = False
-        if self._dirty[LOADCASES]:
-            self._loadcases['iloadcase'] = self._loadcases['loadcase'].copy()
-            self._loadcases.set_index('iloadcase', inplace=True)
-            self._dirty[LOADCASES] = False
-        if self._dirty[LOADCOMBINATIONS]:
-            self._loadcombinations['icombination'] = self._loadcombinations['combination'].copy()
-            self._loadcombinations.set_index('icombination', inplace=True)
-            self._dirty[LOADCOMBINATIONS] = False
-
-        self.mesh.set_indexes()
-        return
-
-    def read_excel(self, filename: str):
-        path = Path(filename)
-        if path.suffix == ".xlsx":
-            self.read_xfem(filename)
-
-        dfs = pd.read_excel(filename, sheet_name=None)
-
-        # coordinates
-        if "points" in dfs:
-            self.mesh._points = dfs["points"]
-            self.mesh._points["point"] = self.mesh._points["point"].astype(str)
-
-        # elements
-        if "elements" in dfs:
-            self.mesh._elements = dfs["elements"]
-            self.mesh._elements["element"] = self.mesh._elements["element"].astype(str)
-            self.mesh.elemlist = {k: self.mesh._elements[self.mesh._elements["type"] == k]["element"].values for k in elemtypes}
-
-        # sections
-        if "sections" in dfs:
-            self._sections = dfs["sections"]
-            self._dirty[SECTIONS] = True
-            
-        if "elementsections" in dfs:
-            self._elemsections = dfs["elementsections"]
-            self._dirty[ELEMSECTIONS] = True
-
-        # supports
-        if "supports" in dfs:
-            self._supports = dfs["supports"]
-            self._dirty[SUPPORTS] = True
-
-        # materials
-        if "materials" in dfs:
-            self._materials = dfs["materials"]
-            self._dirty[MATERIALS] = True
-
-        # point loads
-        if "pointloads" in dfs:
-            self._pointloads = dfs["pointloads"]
-            self._dirty[POINTLOADS] = True
-            
-        # line loads
-        if "lineloads" in dfs:
-            self._lineloads = dfs["lineloads"]
-            self._dirty[LINELOADS] = True
-            
-        # area loads
-        if "arealoads" in dfs:
-            self._arealoads = dfs["arealoads"]
-            self._dirty[AREALOADS] = True   
-            
-        # solid loads
-        if "solidloads" in dfs:
-            self._solidloads = dfs["solidloads"]
-            self._dirty[SOLIDLOADS] = True
-        
-        # load cases
-        if "loadcases" in dfs:
-            self._loadcases = dfs["loadcases"]
-            self._dirty[LOADCASES] = True   
-        
-        # load combinations
-        if "loadcombinations" in dfs:
-            self._loadcombinations = dfs["loadcombinations"]
-            self._dirty[LOADCOMBINATIONS] = True
-
-        return
-
-    def save_excel(self, filename: str):
-        path = Path(filename)
-        if path.suffix != ".xlsx":
-            filename = path.with_suffix(".xlsx")
-
-        with pd.ExcelWriter(filename) as writer:
-            # Write each DataFrame to a different sheet
-            self.mesh._points.to_excel(writer, sheet_name='points', index=False)
-            self.mesh._elements.to_excel(writer, sheet_name='elements', index=False)
-            if not self._sections.empty:
-                self._sections.to_excel(writer, sheet_name='sections', index=False)
-            if not self._elemsections.empty:
-                self._elemsections.to_excel(writer, sheet_name='elementsections', index=False)
-            if not self._materials.empty:
-                self._materials.to_excel(writer, sheet_name='materials', index=False)
-            if not self._supports.empty:
-                self._supports.to_excel(writer, sheet_name='supports', index=False)
-            if not self._loadcases.empty:
-                self._loadcases.to_excel(writer, sheet_name='loadcases', index=False)
-            if not self._loadcombinations.empty:
-                self._loadcombinations.to_excel(writer, sheet_name='loadcombinations', index=False)
-            if not self._pointloads.empty:
-                self._pointloads.to_excel(writer, sheet_name='pointloads', index=False)
-            if not self._lineloads.empty:
-                self._lineloads.to_excel(writer, sheet_name='lineloads', index=False)
-            if not self._arealoads.empty:
-                self._arealoads.to_excel(writer, sheet_name='arealoads', index=False)
-            if not self._solidloads.empty:
-                self._solidloads.to_excel(writer, sheet_name='solidloads', index=False)
-            if 'displacements'in self._results.items.keys():
-                self._results.items['displacements'].to_excel(writer, sheet_name='displacements', index=False)
-            if 'reactions' in self._results.items.keys():
-                self._results.items['reactions'].to_excel(writer, sheet_name='reactions', index=False)
-            if 'stresses_avg' in self._results.items.keys():
-                self._results.items['stresses_avg'].to_excel(writer, sheet_name='stresses_avg', index=False)
-            if 'stresses_eln' in self._results.items.keys():
-                self._results.items['stresses_eln'].to_excel(writer, sheet_name='stresses_eln', index=False)
-            if 'stresses_gauss' in self._results.items.keys():
-                self._results.items['stresses_gauss'].to_excel(writer, sheet_name='stresses_gauss', index=False)
-        return
-
-    def read_xfem(self, filename: str): 
-        path = Path(filename)
-        if path.suffix != ".xdfem":
-            raise ValueError(f"File {filename} is not a .xfem file")
-
-        with zipfile.ZipFile(filename, 'r') as zip_file:
-            with zip_file.open('struct.json') as json_file:
-                data = json.load(json_file)
-                self.from_dict(data)
-            with zip_file.open('mesh.json') as json_file:
-                data = json.load(json_file)
-                self.mesh.from_dict(data)
-            with zip_file.open('data.json') as json_file:
-                data = json.load(json_file)
-                self._results.from_dict(data)
-
-        self._filename = path.parent / path.stem
-        return
-
-    def save_xfem(self, filename: str):
-        path = Path(filename)
-        if path.suffix != ".xdfem":
-            filename = path.with_suffix(".xdfem")
-
-        self.mesh.write_xfem(filename)
-
-        files = self.to_dict()
-        json_data = json.dumps(files, indent=2).replace('NaN', 'null')
-        # with open(filename+'.json', 'w') as f:
-        #     f.write(json_data)
-
-        # Create an in-memory buffer
-        json_buffer = io.BytesIO(json_data.encode('utf-8'))
-        # Reset buffer position to the beginning
-        json_buffer.seek(0)
-        # Create a ZIP file in-memory and add the JSON buffer
-        if path.exists():
-            replace_bytesio_in_zip(filename, 'struct.json', json_buffer.read().decode('utf-8'))
-        else:
-            with zipfile.ZipFile(filename, 'w') as zip_file:
-                zip_file.writestr('struct.json', json_buffer.read().decode('utf-8'))    
-
-        self._results.write_xfem(filename)
-
-        self._filename = str(path.parent / path.stem)
-        return
-    
-    def save(self, filename: str = None, file_format: str = None):
-        if filename == None:
-            if self._filename == None:
-                raise ValueError(f"Filename not provided")
-            if file_format == None or file_format == ".xdfem":
-                filename = self._filename + ".xdfem"
-                file_format = ".xdfem"
-            elif file_format == ".xlsx":
-                filename = self._filename + ".xlsx"
-                file_format = ".xlsx"
-            else:
-                raise ValueError(f"File format {file_format} not recognized")
-
-        path = Path(filename)
-        
-        if path.suffix == "" and file_format == None:
-            raise ValueError(f"File format not recognized")
-
-        if file_format == None:
-            file_format = Path(filename).suffix
-
-        if file_format == ".xlsx":
-            self.save_excel(filename)
-        elif file_format == ".xdfem":
-            self.save_xfem(filename)
-
-            if DEBUG:
-                logging.debug("\nCCopying 'xfem' file to 'zip' file.\n")
-                shutil.copyfile(filename, filename + ".zip")
-        else:
-            raise ValueError(f"File format {file_format} not recognized")
-
-        # self._dirty = [False for i in range(NTABLES)]
-        return
-
-    def read(self, filename: str, file_format: str = None):
-        if file_format == None:
-            file_format = Path(filename).suffix
-
-        if file_format == ".xlsx":
-            self.read_excel(filename)
-        elif file_format == ".xdfem":
-            self.read_xfem(filename)
-        else:
-            raise ValueError(f"File format {file_format} not recognized")
-        return
-
     @staticmethod
     def import_sap2000(filename: str):
         return adapters.sap2000.Reader(filename).to_ofem_struct()
@@ -744,20 +495,175 @@ class xfemStruct:
     @staticmethod
     def import_msh(filename: str):
         return adapters.msh.Reader(filename).to_ofem_struct()
+
+    def get_combos(self):
+        combos = {k: {"type": "", "coefs": {}} for k in self._loadcombinations['combo'].unique().tolist()}
+        for k in combos.keys():
+            for combo in self._loadcombinations[self._loadcombinations['combo'] == k].itertuples():
+                if combo.type is not None:
+                    combos[k]["type"] = combo.type
+                combos[k]["coefs"][combo.case] = combo.coef
+            # combo = self._loadcombinations[self._loadcombinations['combination'] == k]
+            # combos[k] = {k: v for k, v in zip(combo['loadcase'], combo['coef'])}          
+        return combos
     
-    def to_dict(self):
-        return {
-            "sections": self._sections.to_dict(orient="records"),
-            "elementsections": self._elemsections.to_dict(orient="records"),
-            "supports": self._supports.to_dict(orient="records"),
-            "materials": self._materials.to_dict(orient="records"),
-            "pointloads": self._pointloads.to_dict(orient="records"),
-            "lineloads": self._lineloads.to_dict(orient="records"),
-            "arealoads": self._arealoads.to_dict(orient="records"),
-            "solidloads": self._solidloads.to_dict(orient="records"),
-            "loadcases": self._loadcases.to_dict(orient="records"),
-            "loadcombinations": self._loadcombinations.to_dict(orient="records")
-        }
+    def get_cases(self):
+        ### falta implementar a direção
+
+        cases = {
+            k: {"index": 0, "name": "", "type": "dead", "point": {}, "line": {}, "area": {}, 
+                "temp": {}, "grav": {}, "displ": {}} 
+            for k in self._loadcases['case'].unique().tolist()}
+
+        for i, k in enumerate(cases.keys()):
+            case = self._loadcases[self._loadcases['case'] == k].iloc[0]
+            cases[k]["name"] = case.case
+            cases[k]["type"] = case.type
+            cases[k]["index"] = i + 1
+            # go through gravity loads
+            cases[k]["grav"] = -case.gravity if case.gravity is not None else 0
+            # go through point loads
+            if not self._pointloads.empty:
+                for load in self._pointloads[self._pointloads['loadcase'] == k].itertuples():
+                    if not load.point in cases[k]["point"]:
+                        cases[k]["point"][load.point] = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+                    cases[k]["point"][load.point] += np.array([load.fx, load.fy, load.fz, load.mx, load.my, load.mz])
+            # go through line loads
+            if not self._lineloads.empty:
+                for load in self._lineloads[self._lineloads['loadcase'] == k].itertuples():
+                    if not load.element in cases[k]["line"]:
+                        cases[k]["line"][load.element] = np.array([0.0, 0.0, 0.0, 0.0])
+                    cases[k]["line"][load.element] += np.array([load.fx, load.fy, load.fz, load.mx])
+            # go through area loads
+            if not self._arealoads.empty:
+                for load in self._arealoads[self._arealoads['loadcase'] == k].itertuples():
+                    if not load.element in cases[k]["area"]:
+                        cases[k]["area"][load.element] = np.array([0.0, 0.0, 0.0])
+                    cases[k]["area"][load.element] += np.array([load.px, load.py, load.pz])
+
+        return cases
+
+    def export_msh(self, filename: str, model: str = 'geometry', entities: str = 'sections'):
+        """Writes a GMSH mesh file and opens it in GMSH
+
+        Args:
+            filename (str): the name of the file to be written
+        """
+        path = Path(filename)
+        if path.suffix != ".msh":
+            filename = str(path.parent / (path.stem + ".msh"))
+
+        # process options
+        if model not in ['geometry', 'loads']:
+            raise ValueError('model must be "geometry" or "loads"')
+
+        if entities not in ['types', 'sections', 'materials']:
+            raise ValueError('entities must be "types", "sections" or "materials"')
+
+        if DEBUG:
+            starttime = timeit.default_timer()
+            logging.info(f"Processing elements ({self.mesh.num_elements})...")
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        modelname = Path(filename).stem
+        gmsh.model.add(modelname)
+        gmsh.model.setFileName(filename)
+        
+        self.to_gmsh(filename, model, entities)
+
+        # SAVE GEOMETRIC DATA
+        gmsh.option.setNumber("Mesh.SaveAll", 1)
+        gmsh.write(filename)
+
+        if DEBUG:
+            logging.debug(f"Execution time: {round((timeit.default_timer() - starttime)*1000,3)} ms")
+            logging.debug("Processing GMSH intialization...")
+
+        gmsh.finalize()
+
+        
+        # run_gmsh(filename)
+
+        return
+
+    def export_msh_results(self, filename, model: str = 'geometry', entities: str = 'sections',
+                        displacements: bool = True, stresses_avg: bool = False, stresses_eln: bool = False):
+        """Writes a GMSH mesh file and opens it in GMSH
+
+        Args:
+            filename (str): the name of the file to be written
+        """
+        path = Path(filename)
+        if path.suffix != ".msh":
+            filename = str(path.parent / (path.stem + ".msh"))
+
+        # process options
+        if model not in ['geometry', 'loads']:
+            raise ValueError('model must be "geometry" or "loads"')
+
+        if entities not in ['types', 'sections', 'materials']:
+            raise ValueError('entities must be "types", "sections" or "materials"')
+
+        # initialize gmsh
+        gmsh.initialize(sys.argv)
+
+        modelname = Path(filename).stem
+        gmsh.model.add(modelname)
+        gmsh.model.setFileName(filename)
+
+        self.to_gmsh(filename, model, entities)
+
+        gmsh.option.setNumber("Mesh.SaveAll", 1)
+        gmsh.write(filename)
+
+        for i, case in enumerate(self._loadcases.itertuples()):
+            # DATA NODAL
+            if displacements:
+                values = self._results.items['displacements'].loc[self._results.items['displacements']['icomb'] == i+1]
+                list_of_dof = [col for col in values.columns if col.startswith('disp')]
+                for idof in list_of_dof:
+                    view = gmsh.view.add(f'{case.case}: {idof}')
+                    gmsh.view.addHomogeneousModelData(
+                        view, 0, modelname, "NodeData", values["point"].values, values[idof].values)
+                    gmsh.view.option.setNumber(view, "Visible", 0)
+                    gmsh.view.write(view, filename, append=True)
+
+            if stresses_avg:
+                values = self._results.items['stresses_avg'].loc[self._results.items['stresses_avg']['icomb'] == i+1]
+                list_of_dof = [col for col in values.columns if col.startswith('str')]
+                for idof in list_of_dof:
+                    view = gmsh.view.add(f'{case.case}: avg-{idof}')
+                    gmsh.view.addHomogeneousModelData(view, 0, modelname, "NodeData", values["point"].values, values[idof].values)
+                    gmsh.view.option.setNumber(view, "Visible", 0)
+                    gmsh.view.write(view, filename, append=True)
+
+                # DATA ELEMENTS
+            if stresses_eln:
+                values = self._results.items['stresses_eln'].loc[self._results.items['stresses_eln']['icomb'] == i+1]
+                list_of_dof = [col for col in values.columns if col.startswith('str')]
+                elem_list = values[(values['node'] == 1) & (values['icomb'] == i+1)].copy()
+                elem_list['element'] = elem_list["element"].apply(lambda x: self.mesh._elemtag_to_id[x])
+                elem_list = elem_list['element'].values
+                for idof in list_of_dof:
+                    view = gmsh.view.add(f'{case.case}: eln-{idof}')
+                    vlist = values[idof].values
+                    gmsh.view.addHomogeneousModelData(
+                        view, 0, modelname, "ElementNodeData", elem_list, vlist)
+                    gmsh.view.option.setNumber(view, "Visible", 0)
+                    gmsh.view.write(view, filename, append=True)
+
+        # gmsh.fltk.run()
+        gmsh.finalize()
+
+        mesh = meshio.read(filename)
+        
+        mesh = self.to_meshio()
+        filename = str(path.parent / (path.stem + ".vtu"))  
+        meshio.write(filename, mesh, file_format="vtu", binary=True)
+
+        return
 
     def from_dict(self, ofem_dict: dict):
         self._dirty = [False for i in range(NTABLES)]
@@ -824,191 +730,553 @@ class xfemStruct:
 
         return
 
-    @property
-    def mesh(self):
-        return self._mesh
+    def read_excel(self, filename: str):
+        path = Path(filename)
+        if path.suffix == ".xlsx":
+            self.read_xdfem(filename)
 
-    @mesh.setter
-    def mesh(self, mesh):
-        if False:
-            self._mesh = mesh
-            self._mesh._dirtyelements = True
-            self._mesh._dirtypoints = True
-        else: 
-            self._mesh = mesh
-        return
+        dfs = pd.read_excel(filename, sheet_name=None)
 
-    @property
-    def title(self):
-        return self._title
+        # coordinates
+        if "points" in dfs:
+            self.mesh._points = dfs["points"]
+            self.mesh._points["point"] = self.mesh._points["point"].astype(str)
 
-    @title.setter
-    def title(self, title):
-        self._mesh._title = title
+        # elements
+        if "elements" in dfs:
+            self.mesh._elements = dfs["elements"]
+            self.mesh._elements["element"] = self.mesh._elements["element"].astype(str)
+            self.mesh.elemlist = {k: self.mesh._elements[self.mesh._elements["type"] == k]["element"].values for k in elemtypes}
 
-    @property
-    def points(self):
-        return self._mesh.points
-    
-    @points.setter
-    def points(self, points):
-        self._mesh.points = points
-        self._mesh._dirtypoints = True
-    
-    @property
-    def elements(self):
-        return self._mesh.elements
-    
-    @elements.setter
-    def elements(self, elements):
-        self._mesh.elements = elements
-        self._mesh._dirtyelements = True
+        # sections
+        if "sections" in dfs:
+            self._sections = dfs["sections"]
+            self._dirty[SECTIONS] = True
+            
+        if "elementsections" in dfs:
+            self._elemsections = dfs["elementsections"]
+            self._dirty[ELEMSECTIONS] = True
 
-    @property
-    def sections(self):
-        return self._sections
-    
-    @sections.setter
-    def sections(self, sections):
-        self._sections = sections
-        self._dirty[SECTIONS] = True
+        # supports
+        if "supports" in dfs:
+            self._supports = dfs["supports"]
+            self._dirty[SUPPORTS] = True
+
+        # materials
+        if "materials" in dfs:
+            self._materials = dfs["materials"]
+            self._dirty[MATERIALS] = True
+
+        # point loads
+        if "pointloads" in dfs:
+            self._pointloads = dfs["pointloads"]
+            self._dirty[POINTLOADS] = True
+            
+        # line loads
+        if "lineloads" in dfs:
+            self._lineloads = dfs["lineloads"]
+            self._dirty[LINELOADS] = True
+            
+        # area loads
+        if "arealoads" in dfs:
+            self._arealoads = dfs["arealoads"]
+            self._dirty[AREALOADS] = True   
+            
+        # solid loads
+        if "solidloads" in dfs:
+            self._solidloads = dfs["solidloads"]
+            self._dirty[SOLIDLOADS] = True
         
-    @property
-    def supports(self):
-        return self._supports
-    
-    @supports.setter
-    def supports(self, supports):
-        self._supports = supports
-        self._dirty[SUPPORTS] = True
-    
-    @property
-    def materials(self):
-        return self._materials
-    
-    @materials.setter
-    def materials(self, materials):
-        self._materials = materials
-        self._dirty[MATERIALS] = True
-    
-    @property
-    def element_sections(self):
-        return self._elemsections
-    
-    @element_sections.setter
-    def element_sections(self, elemsections):
-        self._elemsections = elemsections
-        self._dirty[ELEMSECTIONS] = True
+        # load cases
+        if "loadcases" in dfs:
+            self._loadcases = dfs["loadcases"]
+            self._dirty[LOADCASES] = True   
+        
+        # load combinations
+        if "loadcombinations" in dfs:
+            self._loadcombinations = dfs["loadcombinations"]
+            self._dirty[LOADCOMBINATIONS] = True
 
-    @property
-    def point_loads(self):
-        return self._pointloads
-    
-    @point_loads.setter
-    def point_loads(self, pointloads):
-        self._pointloads = pointloads
-        self._dirty[POINTLOADS] = True
-    
-    @property
-    def line_loads(self):
-        return self._lineloads
-    
-    @line_loads.setter
-    def line_loads(self, lineloads):
-        self._lineloads = lineloads
-        self._dirty[LINELOADS] = True
-
-    @property
-    def area_loads(self):
-        return self._arealoads
-
-    @area_loads.setter
-    def area_loads(self, arealoads):
-        self._arealoads = arealoads
-        self._dirty[AREALOADS] = True
-
-    @property
-    def solid_loads(self):
-        return self._solidloads
-
-    @solid_loads.setter
-    def solid_loads(self, solidloads):
-        self._solidloads = solidloads
-        self._dirty[SOLIDLOADS] = True
-
-    @property
-    def load_cases(self):
-        return self._loadcases
-    
-    @load_cases.setter
-    def load_cases(self, loadcases):
-        self._loadcases = loadcases
-        self._dirty[LOADCASES] = True
-
-    @property
-    def load_combinations(self):
-        return self._loadcombinations
-
-    @load_combinations.setter
-    def load_combinations(self, loadcombinations):
-        self._loadcombinations = loadcombinations
-        self._dirty[LOADCOMBINATIONS] = True
-    
-    @property
-    def groups(self):
-        return self._groups
-
-    @groups.setter
-    def groups(self, groups):
-        self._groups = groups
         return
 
-    def get_combos(self):
-        combos = {k: {"type": "", "coefs": {}} for k in self._loadcombinations['combo'].unique().tolist()}
-        for k in combos.keys():
-            for combo in self._loadcombinations[self._loadcombinations['combo'] == k].itertuples():
-                if combo.type is not None:
-                    combos[k]["type"] = combo.type
-                combos[k]["coefs"][combo.case] = combo.coef
-            # combo = self._loadcombinations[self._loadcombinations['combination'] == k]
-            # combos[k] = {k: v for k, v in zip(combo['loadcase'], combo['coef'])}          
-        return combos
-    
-    def get_cases(self):
-        ### falta implementar a direção
+    def read_xdfem(self, filename: str): 
+        path = Path(filename)
+        if path.suffix != ".xdfem":
+            raise ValueError(f"File {filename} is not a .xfem file")
 
-        cases = {
-            k: {"index": 0, "name": "", "type": "dead", "point": {}, "line": {}, "area": {}, 
-                "temp": {}, "grav": {}, "displ": {}} 
-            for k in self._loadcases['case'].unique().tolist()}
+        with zipfile.ZipFile(filename, 'r') as zip_file:
+            with zip_file.open('struct.json') as json_file:
+                data = json.load(json_file)
+                self.from_dict(data)
+            with zip_file.open('mesh.json') as json_file:
+                data = json.load(json_file)
+                self.mesh.from_dict(data)
+            with zip_file.open('data.json') as json_file:
+                data = json.load(json_file)
+                self._results.from_dict(data)
 
-        for i, k in enumerate(cases.keys()):
-            case = self._loadcases[self._loadcases['case'] == k].iloc[0]
-            cases[k]["name"] = case.case
-            cases[k]["type"] = case.type
-            cases[k]["index"] = i + 1
-            # go through gravity loads
-            cases[k]["grav"] = -case.gravity if case.gravity is not None else 0
-            # go through point loads
+        self._filename = path.parent / path.stem
+        return
+
+    def read(self, filename: str, file_format: str = None):
+        if file_format == None:
+            file_format = Path(filename).suffix
+
+        if file_format == ".xlsx":
+            self.read_excel(filename)
+        elif file_format == ".xdfem":
+            self.read_xdfem(filename)
+        else:
+            raise ValueError(f"File format {file_format} not recognized")
+        return
+
+    def save_xdfem(self, filename: str):
+        path = Path(filename)
+        if path.suffix != ".xdfem":
+            filename = path.with_suffix(".xdfem")
+
+        self.mesh.write_xdfem(filename)
+
+        files = self.to_dict()
+        json_data = json.dumps(files, indent=2).replace('NaN', 'null')
+        # with open(filename+'.json', 'w') as f:
+        #     f.write(json_data)
+
+        # Create an in-memory buffer
+        json_buffer = io.BytesIO(json_data.encode('utf-8'))
+        # Reset buffer position to the beginning
+        json_buffer.seek(0)
+        # Create a ZIP file in-memory and add the JSON buffer
+        if path.exists():
+            replace_bytesio_in_zip(filename, 'struct.json', json_buffer.read().decode('utf-8'))
+        else:
+            with zipfile.ZipFile(filename, 'w') as zip_file:
+                zip_file.writestr('struct.json', json_buffer.read().decode('utf-8'))    
+
+        self._results.write_xdfem(filename)
+
+        self._filename = str(path.parent / path.stem)
+        return
+
+    def save_excel(self, filename: str):
+        path = Path(filename)
+        if path.suffix != ".xlsx":
+            filename = path.with_suffix(".xlsx")
+
+        with pd.ExcelWriter(filename) as writer:
+            # Write each DataFrame to a different sheet
+            self.mesh._points.to_excel(writer, sheet_name='points', index=False)
+            self.mesh._elements.to_excel(writer, sheet_name='elements', index=False)
+            if not self._sections.empty:
+                self._sections.to_excel(writer, sheet_name='sections', index=False)
+            if not self._elemsections.empty:
+                self._elemsections.to_excel(writer, sheet_name='elementsections', index=False)
+            if not self._materials.empty:
+                self._materials.to_excel(writer, sheet_name='materials', index=False)
+            if not self._supports.empty:
+                self._supports.to_excel(writer, sheet_name='supports', index=False)
+            if not self._loadcases.empty:
+                self._loadcases.to_excel(writer, sheet_name='loadcases', index=False)
+            if not self._loadcombinations.empty:
+                self._loadcombinations.to_excel(writer, sheet_name='loadcombinations', index=False)
             if not self._pointloads.empty:
-                for load in self._pointloads[self._pointloads['loadcase'] == k].itertuples():
-                    if not load.point in cases[k]["point"]:
-                        cases[k]["point"][load.point] = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-                    cases[k]["point"][load.point] += np.array([load.fx, load.fy, load.fz, load.mx, load.my, load.mz])
-            # go through line loads
+                self._pointloads.to_excel(writer, sheet_name='pointloads', index=False)
             if not self._lineloads.empty:
-                for load in self._lineloads[self._lineloads['loadcase'] == k].itertuples():
-                    if not load.element in cases[k]["line"]:
-                        cases[k]["line"][load.element] = np.array([0.0, 0.0, 0.0, 0.0])
-                    cases[k]["line"][load.element] += np.array([load.fx, load.fy, load.fz, load.mx])
-            # go through area loads
+                self._lineloads.to_excel(writer, sheet_name='lineloads', index=False)
             if not self._arealoads.empty:
-                for load in self._arealoads[self._arealoads['loadcase'] == k].itertuples():
-                    if not load.element in cases[k]["area"]:
-                        cases[k]["area"][load.element] = np.array([0.0, 0.0, 0.0])
-                    cases[k]["area"][load.element] += np.array([load.px, load.py, load.pz])
+                self._arealoads.to_excel(writer, sheet_name='arealoads', index=False)
+            if not self._solidloads.empty:
+                self._solidloads.to_excel(writer, sheet_name='solidloads', index=False)
+            if 'displacements'in self._results.items.keys():
+                self._results.items['displacements'].to_excel(writer, sheet_name='displacements', index=False)
+            if 'reactions' in self._results.items.keys():
+                self._results.items['reactions'].to_excel(writer, sheet_name='reactions', index=False)
+            if 'stresses_avg' in self._results.items.keys():
+                self._results.items['stresses_avg'].to_excel(writer, sheet_name='stresses_avg', index=False)
+            if 'stresses_eln' in self._results.items.keys():
+                self._results.items['stresses_eln'].to_excel(writer, sheet_name='stresses_eln', index=False)
+            if 'stresses_gauss' in self._results.items.keys():
+                self._results.items['stresses_gauss'].to_excel(writer, sheet_name='stresses_gauss', index=False)
+        return
 
-        return cases
+    def save(self, filename: str = None, file_format: str = None):
+        if filename == None:
+            if self._filename == None:
+                raise ValueError(f"Filename not provided")
+            if file_format == None or file_format == ".xdfem":
+                filename = self._filename + ".xdfem"
+                file_format = ".xdfem"
+            elif file_format == ".xlsx":
+                filename = self._filename + ".xlsx"
+                file_format = ".xlsx"
+            else:
+                raise ValueError(f"File format {file_format} not recognized")
+
+        path = Path(filename)
+        
+        if path.suffix == "" and file_format == None:
+            raise ValueError(f"File format not recognized")
+
+        if file_format == None:
+            file_format = Path(filename).suffix
+
+        if file_format == ".xlsx":
+            self.save_excel(filename)
+        elif file_format == ".xdfem":
+            self.save_xdfem(filename)
+
+            if DEBUG:
+                logging.debug("\nCCopying 'xfem' file to 'zip' file.\n")
+                shutil.copyfile(filename, filename + ".zip")
+        else:
+            raise ValueError(f"File format {file_format} not recognized")
+
+        # self._dirty = [False for i in range(NTABLES)]
+        return
+
+    def set_indexes(self):
+        if self._dirty[SECTIONS]:
+            self._sections['isection'] = self._sections['section'].copy()
+            self._sections.set_index('isection', inplace=True)
+            self._dirty[SECTIONS] = False
+        if self._dirty[SUPPORTS]:
+            self._supports['isupport'] = self._supports['point'].copy()
+            self._supports.set_index('isupport', inplace=True)
+            self._dirty[SUPPORTS] = False
+        if self._dirty[MATERIALS]:
+            self._materials['imaterial'] = self._materials['material'].copy()
+            self._materials.set_index('imaterial', inplace=True)
+            self._dirty[MATERIALS] = False
+        if self._dirty[ELEMSECTIONS]:
+            self._elemsections['ielement'] = self._elemsections['element'].copy()
+            self._elemsections.set_index('ielement', inplace=True)
+            self._dirty[ELEMSECTIONS] = False
+        if self._dirty[POINTLOADS]:
+            self._pointloads['ipoint'] = self._pointloads['point'].copy()
+            self._pointloads.set_index('ipoint', inplace=True)
+            self._dirty[POINTLOADS] = False
+        if self._dirty[LINELOADS]:
+            self._lineloads['ielement'] = self._lineloads['element'].copy()
+            self._lineloads.set_index('ielement', inplace=True)
+            self._dirty[LINELOADS] = False
+        if self._dirty[AREALOADS]:
+            self._arealoads['ielement'] = self._arealoads['element'].copy()
+            self._arealoads.set_index('ielement', inplace=True)
+            self._dirty[AREALOADS] = False
+        if self._dirty[SOLIDLOADS]:
+            self._solidloads['ielement'] = self._solidloads['element'].copy()
+            self._solidloads.set_index('ielement', inplace=True)
+            self._dirty[SOLIDLOADS] = False
+        if self._dirty[LOADCASES]:
+            self._loadcases['iloadcase'] = self._loadcases['loadcase'].copy()
+            self._loadcases.set_index('iloadcase', inplace=True)
+            self._dirty[LOADCASES] = False
+        if self._dirty[LOADCOMBINATIONS]:
+            self._loadcombinations['icombination'] = self._loadcombinations['combination'].copy()
+            self._loadcombinations.set_index('icombination', inplace=True)
+            self._dirty[LOADCOMBINATIONS] = False
+
+        self.mesh.set_indexes()
+        return
+
+    def solve(self):
+        import uuid
+        
+        filename = (str(uuid.uuid4()) if self._filename is None else self._filename ) 
+
+        self.to_ofem(filename + ".ofem")
+        ofem.solve(filename + ".ofem")
+
+        options = ofem.OfemOptions().get()
+        codes = ofem.OutputOptions.all()
+        ofem.results(filename + ".ofem", codes, **options)
+
+        point_map = dict(zip(self.mesh.points['id'], self.mesh.points['point']))
+        element_map = dict(zip(self.mesh.elements['id'], self.mesh.elements['element']))
+
+        dt =  ofem.get_csv_from_ofem(filename, ofem.libofempy.DI_CSV)
+        dt['point'] = dt['point'].map(point_map)
+        self._results.add("displacements", dt)
+
+        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.RE_CSV)
+        dt['point'] = dt['point'].map(point_map)
+        self._results.add("reactions", dt)
+
+        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.AST_CSV)
+        dt['point'] = dt['point'].map(point_map)
+        self._results.add("stresses_avg", dt)
+
+        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.EST_CSV)
+        dt['element'] = dt['element'].map(element_map)
+        dt['point'] = dt['point'].map(point_map)
+        self._results.add("stresses_eln", dt)
+
+        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.GST_CSV)
+        dt['element'] = dt['element'].map(element_map)
+        self._results.add("stresses_gauss", dt)
+
+        if DEBUG:
+            logging.debug("\nFinishing calculating results.\n")
+            logging.debug("\nCCopying 'xfem' file to 'zip' file.\n")
+            shutil.copyfile(filename + ".ofem", filename + ".ofem" + ".zip")
+
+        return
+
+    def to_dict(self):
+        return {
+            "sections": self._sections.to_dict(orient="records"),
+            "elementsections": self._elemsections.to_dict(orient="records"),
+            "supports": self._supports.to_dict(orient="records"),
+            "materials": self._materials.to_dict(orient="records"),
+            "pointloads": self._pointloads.to_dict(orient="records"),
+            "lineloads": self._lineloads.to_dict(orient="records"),
+            "arealoads": self._arealoads.to_dict(orient="records"),
+            "solidloads": self._solidloads.to_dict(orient="records"),
+            "loadcases": self._loadcases.to_dict(orient="records"),
+            "loadcombinations": self._loadcombinations.to_dict(orient="records")
+        }
+
+    def to_meshio(self):
+
+        self.mesh._set_tags_to_id(base=0)
+        points = self.mesh.points.sort_values(by='id')[["x", "y", "z"]].values.tolist()
+
+        elements = []
+        unique_elements = self.mesh.elements["type"].unique()
+        for ielem in unique_elements:
+            k_elems = self.elements[self.elements["type"] == ielem].copy()
+            l_nodes = self.mesh.get_list_node_columns(ielem)
+        ### tentar este método quando passa xfem para gmsh
+            k_elems.loc[:,l_nodes] = k_elems.loc[:,l_nodes].replace(to_replace=self.mesh._nodetag_to_id)
+            elements.append((common.ofem_meshio[ielem], np.array(k_elems[l_nodes]).astype(int).tolist()))
+
+        elem_data = {}
+        elems = self.elements.copy()
+        sec_dict = dict(zip(self.sections['section'], range(len(self.sections['section']))))
+        elems.loc[:,'section'] = self.element_sections.loc[:,'element'].apply(
+            lambda x: sec_dict[self.element_sections.at[x, 'section']]
+            )
+
+        elem_data['section'] = []
+        for i, ielem in enumerate(unique_elements):
+            kelems = elems.loc[elems["type"] == ielem, 'section']
+            elem_data['section'].append(
+                kelems.values.tolist()
+            )
+            
+        point_data = {}
+        for i, case in enumerate(self._loadcases.itertuples()):
+            values = self._results.items['displacements'].loc[self._results.items['displacements']['icomb'] == i+1].copy()
+            values.loc[:,'point'] = values.loc[:,'point'].replace(to_replace=self.mesh._nodetag_to_id)
+            values = values.sort_values(by='point')
+            list_of_dof = [col for col in values.columns if col.startswith('disp')]
+            for idof in list_of_dof:
+                key = f'case: {case.case} % {idof}'
+                point_data[key] = values[idof].values
+
+            values = self._results.items['stresses_avg'].loc[self._results.items['stresses_avg']['icomb'] == i+1]
+            values.loc[:,'point'] = values.loc[:,'point'].replace(to_replace=self.mesh._nodetag_to_id)
+            values = values.sort_values(by='point')
+            list_of_dof = [col for col in values.columns if col.startswith('str')]
+            for idof in list_of_dof:
+                key = f'case: {case.case} % {idof}'
+                point_data[key] = values[idof].values
+
+            # values = self._results.items['stresses_eln'].loc[self._results.items['stresses_eln']['icomb'] == i+1]
+            # list_of_dof = [col for col in values.columns if col.startswith('str')]
+            # elem_list = values[(values['node'] == 1) & (values['icomb'] == i+1)].copy()
+            # elem_list['element'] = elem_list["element"].apply(lambda x: self.mesh._elemtag_to_id[x])
+            # elem_list = elem_list['element'].values
+            # for idof in list_of_dof:
+            #     view = gmsh.view.add(f'{case.case}: eln-{idof}')
+            #     vlist = values[idof].values
+            #     gmsh.view.addHomogeneousModelData(
+            #         view, 0, modelname, "ElementNodeData", elem_list, vlist)
+            #     gmsh.view.option.setNumber(view, "Visible", 0)
+            #     gmsh.view.write(view, filename, append=True)
+
+        mesh = meshio.Mesh(points, elements, cell_data=elem_data ,point_data=point_data, )
+            # #cell_data=elem_data,
+        #     # Optionally provide extra data on points, cells, etc.
+        #     point_data={"T": [0.3, -1.2, 0.5, 0.7, 0.0, -3.0]},
+        #     # Each item in cell data must match the cells array
+        #     cell_data={"a": [[0.1, 0.2], [0.4]]},
+        # )
+
+        return mesh
+
+    def to_gmsh(self, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
+
+        self.set_indexes()
+        self.mesh.set_points_elems_id(1)
+
+        joints = self.mesh.points.copy()
+        frames = self.mesh.elements.loc[self.mesh.elements['type'].isin(common.ofem_lines)].copy()
+        for etype in frames['type'].unique():
+            nlist = self.mesh.get_list_node_columns(etype)
+            for col in nlist:
+                frames[col] = joints.loc[frames[col].values, 'id'].values
+            frames['nodes'] = frames[nlist].values.tolist()
+
+        frames.loc[:,'section'] = self.element_sections.loc[:,'element'].apply(
+            lambda x: self.element_sections.at[x, 'section']
+            )
+        frames.loc[:,'material'] = frames.loc[:,'section'].apply(
+            lambda x: self.sections.at[x, 'material']
+            )
+        framesections = frames['section'].unique()
+        framematerials = frames['material'].unique()
+
+        areas = self.mesh.elements.loc[self.mesh.elements['type'].isin(common.ofem_areas)].copy()
+        for col in areas.columns:
+            if not col.startswith('node'):
+                continue
+            areas[col] = joints.loc[areas[col].values, 'id'].values
+        areas.loc[:,'section'] = self.element_sections.loc[:,'element'].apply(
+            lambda x: self.element_sections.at[x, 'section']
+            )
+        areas.loc[:,'material'] = areas.loc[:,'section'].apply(
+            lambda x: self.sections.at[x, 'material']
+            )
+        areasections = areas['section'].unique()
+        areamaterials = areas['material'].unique()
+
+        # JOINTS
+        # max_values = joints[['x', 'y', 'z']].max()
+        # min_values = joints[['x', 'y', 'z']].max()
+        
+        supps = self.supports
+        supps['point'] = supps['point'].astype(str)
+        supps['joined'] = supps[['ux', 'uy', 'uz', 'rx', 'ry', 'rz']].apply(lambda x: ''.join(map(str, x)), axis=1)
+        supp_types = supps['joined'].unique()
+        supp_nodes = supps['point'].values.tolist()
+
+        # add free nodes
+        joints['point'] = joints['id'].astype(str)
+        free_nodes = joints[~joints['point'].isin(supp_nodes)].copy()
+        free_nodes['coord'] = free_nodes[['x', 'y', 'z']].values.tolist()
+        ient = gmsh.model.addDiscreteEntity(common.POINT)
+        gmsh.model.setEntityName(common.CURVE, ient, 'free nodes')
+        gmsh.model.mesh.addNodes(common.POINT, ient, free_nodes['id'].values, free_nodes['coord'].explode().to_list())
+
+        # add nodes for each type of support
+        for sup_type in supp_types:
+            supp_nodes = supps.loc[supps['joined'] == sup_type, 'point'].values.tolist()
+            free_nodes = joints.loc[joints['point'].isin(supp_nodes)].copy()
+            free_nodes['coord'] = free_nodes[['x', 'y', 'z']].values.tolist()
+            ient = gmsh.model.addDiscreteEntity(common.POINT)
+            gmsh.model.setEntityName(common.CURVE, ient, 'sup: ' + sup_type)
+            gmsh.model.mesh.addNodes(common.POINT, ient, free_nodes['id'].values, free_nodes['coord'].explode().to_list())
+
+            gmsh.model.addPhysicalGroup(common.POINT, [ient], name="sup: " + sup_type)
+
+        # ELEMENTS - FRAMES
+        logging.info(f"Processing frames ({self.mesh.num_elements})...")
+
+        if entities == 'sections':
+            for sec in framesections:
+                framesl = pd.DataFrame(frames.loc[frames['section']==sec])
+                line = gmsh.model.addDiscreteEntity(common.CURVE)
+                gmsh.model.setEntityName(common.CURVE, line, sec)
+
+                for etype in framesl['type'].unique():
+                    nlist = self.mesh.get_list_node_columns(etype)
+                    frames2 = framesl.loc[framesl['type'] == etype].copy()
+                    frames2['nodes'] = frames2[nlist].values.tolist()
+                    gmsh.model.mesh.addElementsByType(line, common.ofem_gmsh[etype], frames2['id'].to_list(), 
+                            frames2['nodes'].explode().to_list())
+
+                gmsh.model.addPhysicalGroup(common.CURVE, [line], name="sec: " + sec)
+
+        elif entities == 'materials':
+            for mat in framematerials:
+                framesl = frames.loc[frames['material']==mat].copy()
+                line = gmsh.model.addDiscreteEntity(common.CURVE)
+                gmsh.model.setEntityName(common.URVE, line, mat)
+                lst = framesl['id'].to_list()
+                gmsh.model.mesh.addElementsByType(line, common.ofem_gmsh['line2'], lst, framesl['nodes'].explode().to_list())
+
+                gmsh.model.addPhysicalGroup(common.CURVE, [line], name="frame: " + mat)
+
+        elif entities == 'types':
+            line = gmsh.model.addDiscreteEntity(common.CURVE)
+            gmsh.model.setEntityName(common.CURVE, line, 'Line2')
+            gmsh.model.mesh.addElementsByType(line, common.ofem_gmsh['line2'], frames['id'].to_list(), frames['nodes'].explode().to_list())
+        else:
+            raise ValueError('entities must be "types", "sections" or "elements"')
+
+        # ELEMENTS - AREAS
+
+        if entities == 'sections':
+            for sec in areasections:
+                areasl = areas.loc[areas['section']==sec].copy()
+                surf = gmsh.model.addDiscreteEntity(common.SURFACE)
+                gmsh.model.setEntityName(common.SURFACE, surf, sec)
+                
+                for etype in areasl['type'].unique():
+                    nlist = self.mesh.get_list_node_columns(etype)
+                    areas3 = areasl.loc[areasl['type'] == etype].copy()
+                    areas3['nodes'] = areas3[nlist].values.tolist()
+                    gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh[etype], areas3['id'].to_list(), 
+                            areas3['nodes'].explode().to_list())
+
+                gmsh.model.addPhysicalGroup(common.SURFACE, [surf], name="sec: " + sec)
+
+        elif entities == 'materials':
+
+            for mat in areamaterials:
+                areasl = areas.loc[areas['material']==mat].copy()
+                surf = gmsh.model.addDiscreteEntity(common.SURFACE)
+                gmsh.model.setEntityName(common.SURFACE, surf, mat)
+
+                for etype in areasl['type'].unique():
+                    nlist = self.mesh.get_list_node_columns(etype)
+                    areas3 = areasl.loc[areasl['type'] == etype].copy()
+                    areas3['nodes'] = areas3[nlist].values.tolist()
+                    gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh[etype], areas3['id'].to_list(), 
+                            areas3['nodes'].explode().to_list())
+
+                # areas3 = areasl.loc[areasl['type'] == 'area3'].copy()
+                # areas3['nodes'] = areas3[['node1', 'node2', 'node3']].values.tolist()
+                # gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area3'], areas3['id'].to_list(), 
+                #         areas3['nodes'].explode().to_list())
+
+                # areas3 = areasl.loc[areasl['type'] == 'area4'].copy()
+                # areas3['nodes'] = areas3[['node1', 'node2', 'node3', 'node4']].values.tolist()
+                # gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area4'], areas3['id'].to_list(), 
+                #         areas3['nodes'].explode().to_list())
+
+                gmsh.model.addPhysicalGroup(common.SURFACE, [surf], name="area: " + mat)
+
+        elif entities == 'types':
+            areas3 = areas.loc[areas['type'] == 'area3'].copy()
+            if not areas3.empty:
+                areas3['nodes'] = areas3[['node1', 'node2', 'node3']].values.tolist()
+                surf = gmsh.model.addDiscreteEntity(common.SURFACE)
+                gmsh.model.setEntityName(common.SURFACE, surf, 'Triangle3')
+                gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area3'], areas3['id'].to_list(), 
+                        areas3['nodes'].explode().to_list())
+
+            areas3 = areas.loc[areas['type'] == 'area4'].copy()
+            if not areas3.empty:
+                areas3['nodes'] = areas3.loc[:,['node1', 'node2', 'node3', 'node4']].values.tolist()
+                surf = gmsh.model.addDiscreteEntity(common.SURFACE)
+                gmsh.model.setEntityName(common.SURFACE, surf, 'Quadrangle4')
+                gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area4'], areas3['id'].to_list(), 
+                        areas3['nodes'].explode().to_list())
+        else:
+            raise ValueError('entities must be "types", "sections" or "elements"')
+
+        # ATTRIBUTES
+        gmsh.model.setAttribute("Supports", self.supports['point'].values.tolist())
+        data_list = self.supports.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        gmsh.model.setAttribute("Supports", data_list)
+        data_list = self.sections.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        gmsh.model.setAttribute("Sections", data_list)
+        data_list = self.materials.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        gmsh.model.setAttribute("Materials", data_list)
+
+        return
 
     def to_ofem(self, mesh_file: str):
         """Writes an ofem file
@@ -1358,411 +1626,143 @@ class xfemStruct:
 
         return
 
-    def solve(self):
-        import uuid
-        
-        filename = (str(uuid.uuid4()) if self._filename is None else self._filename ) 
+    @property
+    def mesh(self):
+        return self._mesh
 
-        self.to_ofem(filename + ".ofem")
-        ofem.solve(filename + ".ofem")
-
-        options = ofem.OfemOptions().get()
-        codes = ofem.OutputOptions.all()
-        ofem.results(filename + ".ofem", codes, **options)
-
-        point_map = dict(zip(self.mesh.points['id'], self.mesh.points['point']))
-        element_map = dict(zip(self.mesh.elements['id'], self.mesh.elements['element']))
-
-        dt =  ofem.get_csv_from_ofem(filename, ofem.libofempy.DI_CSV)
-        dt['point'] = dt['point'].map(point_map)
-        self._results.add("displacements", dt)
-
-        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.RE_CSV)
-        dt['point'] = dt['point'].map(point_map)
-        self._results.add("reactions", dt)
-
-        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.AST_CSV)
-        dt['point'] = dt['point'].map(point_map)
-        self._results.add("stresses_avg", dt)
-
-        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.EST_CSV)
-        dt['element'] = dt['element'].map(element_map)
-        dt['point'] = dt['point'].map(point_map)
-        self._results.add("stresses_eln", dt)
-
-        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.GST_CSV)
-        dt['element'] = dt['element'].map(element_map)
-        self._results.add("stresses_gauss", dt)
-
-        if DEBUG:
-            logging.debug("\nFinishing calculating results.\n")
-            logging.debug("\nCCopying 'xfem' file to 'zip' file.\n")
-            shutil.copyfile(filename + ".ofem", filename + ".ofem" + ".zip")
-
+    @mesh.setter
+    def mesh(self, mesh):
+        if False:
+            self._mesh = mesh
+            self._mesh._dirtyelements = True
+            self._mesh._dirtypoints = True
+        else: 
+            self._mesh = mesh
         return
 
-    def to_meshio(self):
+    @property
+    def title(self):
+        return self._title
 
-        self.mesh._set_tags_to_id(base=0)
-        points = self.mesh.points.sort_values(by='id')[["x", "y", "z"]].values.tolist()
+    @title.setter
+    def title(self, title):
+        self._mesh._title = title
 
-        elements = []
-        unique_elements = self.mesh.elements["type"].unique()
-        for ielem in unique_elements:
-            k_elems = self.elements[self.elements["type"] == ielem].copy()
-            l_nodes = self.mesh.get_list_node_columns(ielem)
-        ### tentar este método quando passa xfem para gmsh
-            k_elems.loc[:,l_nodes] = k_elems.loc[:,l_nodes].replace(to_replace=self.mesh._nodetag_to_id)
-            elements.append((common.ofem_meshio[ielem], np.array(k_elems[l_nodes]).astype(int).tolist()))
+    @property
+    def points(self):
+        return self._mesh.points
+    
+    @points.setter
+    def points(self, points):
+        self._mesh.points = points
+        self._mesh._dirtypoints = True
+    
+    @property
+    def elements(self):
+        return self._mesh.elements
+    
+    @elements.setter
+    def elements(self, elements):
+        self._mesh.elements = elements
+        self._mesh._dirtyelements = True
 
-        elem_data = {}
-        elems = self.elements.copy()
-        sec_dict = dict(zip(self.sections['section'], range(len(self.sections['section']))))
-        elems.loc[:,'section'] = self.element_sections.loc[:,'element'].apply(
-            lambda x: sec_dict[self.element_sections.at[x, 'section']]
-            )
-
-        elem_data['section'] = []
-        for i, ielem in enumerate(unique_elements):
-            kelems = elems.loc[elems["type"] == ielem, 'section']
-            elem_data['section'].append(
-                kelems.values.tolist()
-            )
-            
-        point_data = {}
-        for i, case in enumerate(self._loadcases.itertuples()):
-            values = self._results.items['displacements'].loc[self._results.items['displacements']['icomb'] == i+1].copy()
-            values.loc[:,'point'] = values.loc[:,'point'].replace(to_replace=self.mesh._nodetag_to_id)
-            values = values.sort_values(by='point')
-            list_of_dof = [col for col in values.columns if col.startswith('disp')]
-            for idof in list_of_dof:
-                key = f'case: {case.case} % {idof}'
-                point_data[key] = values[idof].values
-
-            values = self._results.items['stresses_avg'].loc[self._results.items['stresses_avg']['icomb'] == i+1]
-            values.loc[:,'point'] = values.loc[:,'point'].replace(to_replace=self.mesh._nodetag_to_id)
-            values = values.sort_values(by='point')
-            list_of_dof = [col for col in values.columns if col.startswith('str')]
-            for idof in list_of_dof:
-                key = f'case: {case.case} % {idof}'
-                point_data[key] = values[idof].values
-
-            # values = self._results.items['stresses_eln'].loc[self._results.items['stresses_eln']['icomb'] == i+1]
-            # list_of_dof = [col for col in values.columns if col.startswith('str')]
-            # elem_list = values[(values['node'] == 1) & (values['icomb'] == i+1)].copy()
-            # elem_list['element'] = elem_list["element"].apply(lambda x: self.mesh._elemtag_to_id[x])
-            # elem_list = elem_list['element'].values
-            # for idof in list_of_dof:
-            #     view = gmsh.view.add(f'{case.case}: eln-{idof}')
-            #     vlist = values[idof].values
-            #     gmsh.view.addHomogeneousModelData(
-            #         view, 0, modelname, "ElementNodeData", elem_list, vlist)
-            #     gmsh.view.option.setNumber(view, "Visible", 0)
-            #     gmsh.view.write(view, filename, append=True)
-
-        mesh = meshio.Mesh(points, elements, cell_data=elem_data ,point_data=point_data, )
-            # #cell_data=elem_data,
-        #     # Optionally provide extra data on points, cells, etc.
-        #     point_data={"T": [0.3, -1.2, 0.5, 0.7, 0.0, -3.0]},
-        #     # Each item in cell data must match the cells array
-        #     cell_data={"a": [[0.1, 0.2], [0.4]]},
-        # )
-
-        return mesh
-
-    def export_msh(self, filename: str, model: str = 'geometry', entities: str = 'sections'):
-        """Writes a GMSH mesh file and opens it in GMSH
-
-        Args:
-            filename (str): the name of the file to be written
-        """
-        path = Path(filename)
-        if path.suffix != ".msh":
-            filename = str(path.parent / (path.stem + ".msh"))
-
-        # process options
-        if model not in ['geometry', 'loads']:
-            raise ValueError('model must be "geometry" or "loads"')
-
-        if entities not in ['types', 'sections', 'materials']:
-            raise ValueError('entities must be "types", "sections" or "materials"')
-
-        if DEBUG:
-            starttime = timeit.default_timer()
-            logging.info(f"Processing elements ({self.mesh.num_elements})...")
-
-        # initialize gmsh
-        gmsh.initialize(sys.argv)
-
-        modelname = Path(filename).stem
-        gmsh.model.add(modelname)
-        gmsh.model.setFileName(filename)
+    @property
+    def sections(self):
+        return self._sections
+    
+    @sections.setter
+    def sections(self, sections):
+        self._sections = sections
+        self._dirty[SECTIONS] = True
         
-        self._to_gmsh(filename, model, entities)
+    @property
+    def supports(self):
+        return self._supports
+    
+    @supports.setter
+    def supports(self, supports):
+        self._supports = supports
+        self._dirty[SUPPORTS] = True
+    
+    @property
+    def materials(self):
+        return self._materials
+    
+    @materials.setter
+    def materials(self, materials):
+        self._materials = materials
+        self._dirty[MATERIALS] = True
+    
+    @property
+    def element_sections(self):
+        return self._elemsections
+    
+    @element_sections.setter
+    def element_sections(self, elemsections):
+        self._elemsections = elemsections
+        self._dirty[ELEMSECTIONS] = True
 
-        # SAVE GEOMETRIC DATA
-        gmsh.option.setNumber("Mesh.SaveAll", 1)
-        gmsh.write(filename)
+    @property
+    def point_loads(self):
+        return self._pointloads
+    
+    @point_loads.setter
+    def point_loads(self, pointloads):
+        self._pointloads = pointloads
+        self._dirty[POINTLOADS] = True
+    
+    @property
+    def line_loads(self):
+        return self._lineloads
+    
+    @line_loads.setter
+    def line_loads(self, lineloads):
+        self._lineloads = lineloads
+        self._dirty[LINELOADS] = True
 
-        if DEBUG:
-            logging.debug(f"Execution time: {round((timeit.default_timer() - starttime)*1000,3)} ms")
-            logging.debug("Processing GMSH intialization...")
+    @property
+    def area_loads(self):
+        return self._arealoads
 
-        gmsh.finalize()
+    @area_loads.setter
+    def area_loads(self, arealoads):
+        self._arealoads = arealoads
+        self._dirty[AREALOADS] = True
 
-        
-        # run_gmsh(filename)
+    @property
+    def solid_loads(self):
+        return self._solidloads
 
-        return
+    @solid_loads.setter
+    def solid_loads(self, solidloads):
+        self._solidloads = solidloads
+        self._dirty[SOLIDLOADS] = True
 
-    def _to_gmsh(self, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
+    @property
+    def load_cases(self):
+        return self._loadcases
+    
+    @load_cases.setter
+    def load_cases(self, loadcases):
+        self._loadcases = loadcases
+        self._dirty[LOADCASES] = True
 
-        self.set_indexes()
-        self.mesh.set_points_elems_id(1)
+    @property
+    def load_combinations(self):
+        return self._loadcombinations
 
-        joints = self.mesh.points.copy()
-        frames = self.mesh.elements.loc[self.mesh.elements['type'].isin(common.ofem_lines)].copy()
-        for etype in frames['type'].unique():
-            nlist = self.mesh.get_list_node_columns(etype)
-            for col in nlist:
-                frames[col] = joints.loc[frames[col].values, 'id'].values
-            frames['nodes'] = frames[nlist].values.tolist()
+    @load_combinations.setter
+    def load_combinations(self, loadcombinations):
+        self._loadcombinations = loadcombinations
+        self._dirty[LOADCOMBINATIONS] = True
+    
+    @property
+    def groups(self):
+        return self._groups
 
-        frames.loc[:,'section'] = self.element_sections.loc[:,'element'].apply(
-            lambda x: self.element_sections.at[x, 'section']
-            )
-        frames.loc[:,'material'] = frames.loc[:,'section'].apply(
-            lambda x: self.sections.at[x, 'material']
-            )
-        framesections = frames['section'].unique()
-        framematerials = frames['material'].unique()
-
-        areas = self.mesh.elements.loc[self.mesh.elements['type'].isin(common.ofem_areas)].copy()
-        for col in areas.columns:
-            if not col.startswith('node'):
-                continue
-            areas[col] = joints.loc[areas[col].values, 'id'].values
-        areas.loc[:,'section'] = self.element_sections.loc[:,'element'].apply(
-            lambda x: self.element_sections.at[x, 'section']
-            )
-        areas.loc[:,'material'] = areas.loc[:,'section'].apply(
-            lambda x: self.sections.at[x, 'material']
-            )
-        areasections = areas['section'].unique()
-        areamaterials = areas['material'].unique()
-
-        # JOINTS
-        # max_values = joints[['x', 'y', 'z']].max()
-        # min_values = joints[['x', 'y', 'z']].max()
-        
-        supps = self.supports
-        supps['point'] = supps['point'].astype(str)
-        supps['joined'] = supps[['ux', 'uy', 'uz', 'rx', 'ry', 'rz']].apply(lambda x: ''.join(map(str, x)), axis=1)
-        supp_types = supps['joined'].unique()
-        supp_nodes = supps['point'].values.tolist()
-
-        # add free nodes
-        joints['point'] = joints['id'].astype(str)
-        free_nodes = joints[~joints['point'].isin(supp_nodes)].copy()
-        free_nodes['coord'] = free_nodes[['x', 'y', 'z']].values.tolist()
-        ient = gmsh.model.addDiscreteEntity(common.POINT)
-        gmsh.model.setEntityName(common.CURVE, ient, 'free nodes')
-        gmsh.model.mesh.addNodes(common.POINT, ient, free_nodes['id'].values, free_nodes['coord'].explode().to_list())
-
-        # add nodes for each type of support
-        for sup_type in supp_types:
-            supp_nodes = supps.loc[supps['joined'] == sup_type, 'point'].values.tolist()
-            free_nodes = joints.loc[joints['point'].isin(supp_nodes)].copy()
-            free_nodes['coord'] = free_nodes[['x', 'y', 'z']].values.tolist()
-            ient = gmsh.model.addDiscreteEntity(common.POINT)
-            gmsh.model.setEntityName(common.CURVE, ient, 'sup: ' + sup_type)
-            gmsh.model.mesh.addNodes(common.POINT, ient, free_nodes['id'].values, free_nodes['coord'].explode().to_list())
-
-            gmsh.model.addPhysicalGroup(common.POINT, [ient], name="sup: " + sup_type)
-
-        # ELEMENTS - FRAMES
-        logging.info(f"Processing frames ({self.mesh.num_elements})...")
-
-        if entities == 'sections':
-            for sec in framesections:
-                framesl = pd.DataFrame(frames.loc[frames['section']==sec])
-                line = gmsh.model.addDiscreteEntity(common.CURVE)
-                gmsh.model.setEntityName(common.CURVE, line, sec)
-
-                for etype in framesl['type'].unique():
-                    nlist = self.mesh.get_list_node_columns(etype)
-                    frames2 = framesl.loc[framesl['type'] == etype].copy()
-                    frames2['nodes'] = frames2[nlist].values.tolist()
-                    gmsh.model.mesh.addElementsByType(line, common.ofem_gmsh[etype], frames2['id'].to_list(), 
-                            frames2['nodes'].explode().to_list())
-
-                gmsh.model.addPhysicalGroup(common.CURVE, [line], name="sec: " + sec)
-
-        elif entities == 'materials':
-            for mat in framematerials:
-                framesl = frames.loc[frames['material']==mat].copy()
-                line = gmsh.model.addDiscreteEntity(common.CURVE)
-                gmsh.model.setEntityName(common.URVE, line, mat)
-                lst = framesl['id'].to_list()
-                gmsh.model.mesh.addElementsByType(line, common.ofem_gmsh['line2'], lst, framesl['nodes'].explode().to_list())
-
-                gmsh.model.addPhysicalGroup(common.CURVE, [line], name="frame: " + mat)
-
-        elif entities == 'types':
-            line = gmsh.model.addDiscreteEntity(common.CURVE)
-            gmsh.model.setEntityName(common.CURVE, line, 'Line2')
-            gmsh.model.mesh.addElementsByType(line, common.ofem_gmsh['line2'], frames['id'].to_list(), frames['nodes'].explode().to_list())
-        else:
-            raise ValueError('entities must be "types", "sections" or "elements"')
-
-        # ELEMENTS - AREAS
-
-        if entities == 'sections':
-            for sec in areasections:
-                areasl = areas.loc[areas['section']==sec].copy()
-                surf = gmsh.model.addDiscreteEntity(common.SURFACE)
-                gmsh.model.setEntityName(common.SURFACE, surf, sec)
-                
-                for etype in areasl['type'].unique():
-                    nlist = self.mesh.get_list_node_columns(etype)
-                    areas3 = areasl.loc[areasl['type'] == etype].copy()
-                    areas3['nodes'] = areas3[nlist].values.tolist()
-                    gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh[etype], areas3['id'].to_list(), 
-                            areas3['nodes'].explode().to_list())
-
-                gmsh.model.addPhysicalGroup(common.SURFACE, [surf], name="sec: " + sec)
-
-        elif entities == 'materials':
-
-            for mat in areamaterials:
-                areasl = areas.loc[areas['material']==mat].copy()
-                surf = gmsh.model.addDiscreteEntity(common.SURFACE)
-                gmsh.model.setEntityName(common.SURFACE, surf, mat)
-
-                for etype in areasl['type'].unique():
-                    nlist = self.mesh.get_list_node_columns(etype)
-                    areas3 = areasl.loc[areasl['type'] == etype].copy()
-                    areas3['nodes'] = areas3[nlist].values.tolist()
-                    gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh[etype], areas3['id'].to_list(), 
-                            areas3['nodes'].explode().to_list())
-
-                # areas3 = areasl.loc[areasl['type'] == 'area3'].copy()
-                # areas3['nodes'] = areas3[['node1', 'node2', 'node3']].values.tolist()
-                # gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area3'], areas3['id'].to_list(), 
-                #         areas3['nodes'].explode().to_list())
-
-                # areas3 = areasl.loc[areasl['type'] == 'area4'].copy()
-                # areas3['nodes'] = areas3[['node1', 'node2', 'node3', 'node4']].values.tolist()
-                # gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area4'], areas3['id'].to_list(), 
-                #         areas3['nodes'].explode().to_list())
-
-                gmsh.model.addPhysicalGroup(common.SURFACE, [surf], name="area: " + mat)
-
-        elif entities == 'types':
-            areas3 = areas.loc[areas['type'] == 'area3'].copy()
-            if not areas3.empty:
-                areas3['nodes'] = areas3[['node1', 'node2', 'node3']].values.tolist()
-                surf = gmsh.model.addDiscreteEntity(common.SURFACE)
-                gmsh.model.setEntityName(common.SURFACE, surf, 'Triangle3')
-                gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area3'], areas3['id'].to_list(), 
-                        areas3['nodes'].explode().to_list())
-
-            areas3 = areas.loc[areas['type'] == 'area4'].copy()
-            if not areas3.empty:
-                areas3['nodes'] = areas3.loc[:,['node1', 'node2', 'node3', 'node4']].values.tolist()
-                surf = gmsh.model.addDiscreteEntity(common.SURFACE)
-                gmsh.model.setEntityName(common.SURFACE, surf, 'Quadrangle4')
-                gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh['area4'], areas3['id'].to_list(), 
-                        areas3['nodes'].explode().to_list())
-        else:
-            raise ValueError('entities must be "types", "sections" or "elements"')
-
-        # ATTRIBUTES
-        gmsh.model.setAttribute("Supports", self.supports['point'].values.tolist())
-        data_list = self.supports.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
-        gmsh.model.setAttribute("Supports", data_list)
-        data_list = self.sections.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
-        gmsh.model.setAttribute("Sections", data_list)
-        data_list = self.materials.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
-        gmsh.model.setAttribute("Materials", data_list)
-
-        return
-
-    def export_msh_results(self, filename, model: str = 'geometry', entities: str = 'sections',
-                        displacements: bool = True, stresses_avg: bool = False, stresses_eln: bool = False):
-        """Writes a GMSH mesh file and opens it in GMSH
-
-        Args:
-            filename (str): the name of the file to be written
-        """
-        path = Path(filename)
-        if path.suffix != ".msh":
-            filename = str(path.parent / (path.stem + ".msh"))
-
-        # process options
-        if model not in ['geometry', 'loads']:
-            raise ValueError('model must be "geometry" or "loads"')
-
-        if entities not in ['types', 'sections', 'materials']:
-            raise ValueError('entities must be "types", "sections" or "materials"')
-
-        # initialize gmsh
-        gmsh.initialize(sys.argv)
-
-        modelname = Path(filename).stem
-        gmsh.model.add(modelname)
-        gmsh.model.setFileName(filename)
-
-        self._to_gmsh(filename, model, entities)
-
-        gmsh.option.setNumber("Mesh.SaveAll", 1)
-        gmsh.write(filename)
-
-        for i, case in enumerate(self._loadcases.itertuples()):
-            # DATA NODAL
-            if displacements:
-                values = self._results.items['displacements'].loc[self._results.items['displacements']['icomb'] == i+1]
-                list_of_dof = [col for col in values.columns if col.startswith('disp')]
-                for idof in list_of_dof:
-                    view = gmsh.view.add(f'{case.case}: {idof}')
-                    gmsh.view.addHomogeneousModelData(
-                        view, 0, modelname, "NodeData", values["point"].values, values[idof].values)
-                    gmsh.view.option.setNumber(view, "Visible", 0)
-                    gmsh.view.write(view, filename, append=True)
-
-            if stresses_avg:
-                values = self._results.items['stresses_avg'].loc[self._results.items['stresses_avg']['icomb'] == i+1]
-                list_of_dof = [col for col in values.columns if col.startswith('str')]
-                for idof in list_of_dof:
-                    view = gmsh.view.add(f'{case.case}: avg-{idof}')
-                    gmsh.view.addHomogeneousModelData(view, 0, modelname, "NodeData", values["point"].values, values[idof].values)
-                    gmsh.view.option.setNumber(view, "Visible", 0)
-                    gmsh.view.write(view, filename, append=True)
-
-                # DATA ELEMENTS
-            if stresses_eln:
-                values = self._results.items['stresses_eln'].loc[self._results.items['stresses_eln']['icomb'] == i+1]
-                list_of_dof = [col for col in values.columns if col.startswith('str')]
-                elem_list = values[(values['node'] == 1) & (values['icomb'] == i+1)].copy()
-                elem_list['element'] = elem_list["element"].apply(lambda x: self.mesh._elemtag_to_id[x])
-                elem_list = elem_list['element'].values
-                for idof in list_of_dof:
-                    view = gmsh.view.add(f'{case.case}: eln-{idof}')
-                    vlist = values[idof].values
-                    gmsh.view.addHomogeneousModelData(
-                        view, 0, modelname, "ElementNodeData", elem_list, vlist)
-                    gmsh.view.option.setNumber(view, "Visible", 0)
-                    gmsh.view.write(view, filename, append=True)
-
-        # gmsh.fltk.run()
-        gmsh.finalize()
-
-        mesh = meshio.read(filename)
-        
-        mesh = self.to_meshio()
-        filename = str(path.parent / (path.stem + ".vtu"))  
-        meshio.write(filename, mesh, file_format="vtu", binary=True)
-
+    @groups.setter
+    def groups(self, groups):
+        self._groups = groups
         return
 
     @property
@@ -1819,7 +1819,7 @@ class xfemData:
             self._collection.pop(name)
         return
 
-    def read_xfem(self, filename: str): 
+    def read_xdfem(self, filename: str): 
         path = Path(filename)
         if path.suffix != ".xdfem":
             raise ValueError(f"File {filename} is not a .xfem file")
@@ -1837,7 +1837,7 @@ class xfemData:
             file_format = Path(filename).suffix
 
         if file_format == ".xdfem":
-            self.read_xfem(filename)
+            self.read_xdfem(filename)
         else:
             raise ValueError(f"File format {file_format} not recognized")
         return
@@ -1854,7 +1854,7 @@ class xfemData:
         if file_format == ".xlsx":
             self.write_excel(filename)
         elif file_format == ".xdfem":
-            self.write_xfem(filename)
+            self.write_xdfem(filename)
         else:
             raise ValueError(f"File format {file_format} not recognized")
 
@@ -1871,7 +1871,7 @@ class xfemData:
 
         return
 
-    def write_xfem(self, filename: str):
+    def write_xdfem(self, filename: str):
         path = Path(filename)
         if path.suffix != ".xdfem":
             filename = path.with_suffix(".xdfem")

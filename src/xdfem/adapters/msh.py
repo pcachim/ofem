@@ -166,4 +166,22 @@ class Reader:
                     df[key] = sec[key]                
                 self.ofem.area_loads = pd.concat([self.ofem.area_loads, df])
 
+        # GROUPS
+        # entities = gmsh.model.getEntities()
+        # for ent in entities:
+        #     dim = ent[0]
+        #     tag = ent[1]
+        #     name = gmsh.model.getEntityName(dim, tag)
+        #     if name.startswith("grp:"):
+        #         grpName = name.split(":")[1].strip()
+        #         entities = gmsh.model.get_entities_for_group(tag)
+        #         elements = [gmsh.model.mesh.getElements(dim, i) for i in entities]
+        #         elements =[np.array(elements[i][1]) for i in range(len(elements))]
+        #         elements = np.concatenate(elements, axis=None).tolist()
+        #         df = pd.DataFrame({'element': elements})
+        #         df['element'] = df['element'].astype(str)
+        #         df['group'] = grpName
+        #         df.loc[:, 'element'] = common.gmsh_ofem_types[dim] + '-' + df.loc[:,['element']]
+        #         self.ofem.groups = pd.concat([self.ofem.groups, df])
+        #         ### verificar com vários tipos de elementos e entities
         return self.ofem

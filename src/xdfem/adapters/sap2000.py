@@ -171,7 +171,7 @@ def read_s2k(filename: str) -> dict:
     return s2k
 
 
-def read_excel(filename: str) -> dict:
+def read_sapexcel(filename: str) -> dict:
     """Reads a SAP2000 excel file
 
     Args:
@@ -296,7 +296,7 @@ class Reader:
         if path.suffix == ".s2k":
             self.s2k = read_s2k(filename)
         elif path.suffix == ".xlsx":
-            self.s2k = read_excel(filename)
+            self.s2k = read_sapexcel(filename)
         else:
             raise ValueError("File extension not supported")
         

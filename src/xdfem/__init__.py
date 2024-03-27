@@ -12,16 +12,9 @@ from . import xfemmesh
 from . import ofem
 from . import adapters
 from .xfemmesh import xfemMesh, xfemStruct, xfemData
-# from .pyfiles import femixhandler
-# from . import meshstruct
 from . import pyfem
-# from .femixhandler import femix_handler
 
-# from . import sap2000handler
-# from .sap2000handler import Reader
 from .adapters import sap2000
 from .adapters import msh
 
-# from .gmshhandler import GmshHandler
 from .meshstruct import Slab, Beam
-# from .ofemstructfile import OfemStructFile

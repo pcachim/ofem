@@ -1,1 +1,1 @@
-include src/ofempy/ofem/libofemc.dylib
+include src/xdfem/ofem/libofemc.dylib
