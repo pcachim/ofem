@@ -163,23 +163,100 @@ class xfemMesh:
         nnodes = common.ofem_nnodes[elemtype]
         return [f"node{i}" for i in range(1, nnodes+1)]
 
-    def set_points_elems_id(self, base: int = 1):
-        self._set_tags_to_id(base)     
-        self._points["id"] = self._points["point"].apply(lambda x: self._nodetag_to_id[x])
-        self._elements["id"] = self._elements["element"].apply(lambda x: self._elemtag_to_id[x])
-        self._dirtypoints = False
-        self._dirtyelements = False
-        return 
+    def get_normals(self, convention: str = "") -> dict:
+        """
+            convention (str, optional): Defaults to "ofempy". 
+            can be "ofempy", "sap2000" or "femix".
+        """
+        convention = convention.lower()
+        if convention == "femix":
+            return self.get_normals_femix()
+        # elif convention == "sap2000" or convention == "ofempy":
+        else:
+            return self.get_normals_sap2000()
 
-    def set_indexes(self):
-        # if self._dirtyelements:
-        self._elements['ielement'] = self._elements['element'].copy()
-        self._elements.set_index('ielement', inplace=True)
-        self._dirtyelements = False
-        # if self._dirtypoints:
-        ipoint = self._points['point'].copy()
-        self._points.set_index(ipoint, inplace=True)
-        self._dirtypoints = False
+    def get_normals_sap2000(self):
+        if self._dirty:
+            self.set_indexes()
+        normals = {}
+        for elem in self._elements.itertuples():
+            if str(elem.type).startswith("line"):
+                node1 = self._points.loc[elem.node1]
+                node2 = self._points.loc[elem.node2]
+                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+                v1 = v1/np.linalg.norm(v1)
+                v3 = np.cross(v1, [0, 0, 1])
+                n3 = np.linalg.norm(v3)
+                v3 = [0, np.sign(v1[2]), 0] if abs(n3) < 1.0e-10 else v3/n3
+                v2 = np.cross(v3, v1)
+            elif str(elem.type).startswith("area"):
+                node1 = self._points.loc[elem.node1]
+                node2 = self._points.loc[elem.node2]
+                node3 = self._points.loc[elem.node3] if elem.type == 'area3' else self._points.loc[elem.node4] 
+                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+                v2 = np.array([node3.x - node1.x, node3.y - node1.y, node3.z - node1.z])
+                v3 = np.cross(v1, v2)
+                v3 = v3/np.linalg.norm(v3)
+
+                v1 = np.cross([0, 0, 1], v3)
+                n1 = np.linalg.norm(v1)
+                v1 = [1, 0, 0] if abs(n1) < 1.0e-10 else v1
+                v1 = v1/np.linalg.norm(v1)
+                v2 = np.cross(v3, v1)
+            elif str(elem.type).startswith("solid"):
+                v1 = np.array([1, 0, 0])
+                v2 = np.array([0, 1, 0])
+                v3 = np.array([0, 0, 1])
+            elif str(elem.type).startswith("point"):
+                v1 = np.array([1, 0, 0])
+                v2 = np.array([0, 1, 0])
+                v3 = np.array([0, 0, 1])
+            else:
+                raise ValueError('element type not recognized')
+            
+            normals[elem.element] = [v1, v2, v3]
+        return normals
+
+    def get_normals_femix(self):
+        self.set_indexes()
+        normals = {}
+        for elem in self._elements.itertuples():
+            if str(elem.type).startswith("line"):
+                node1 = self._points.loc[elem.node1]
+                node2 = self._points.loc[elem.node2]
+                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+                v1 = v1/np.linalg.norm(v1)
+                v3 = np.cross(v1, [0, 1, 0])
+                n3 = np.linalg.norm(v3)
+                v3 = [-np.sign(v1[2]), 0, 0] if abs(n3) < 1.0e-10 else v3/n3
+                v2 = np.cross(v3, v1)
+            elif str(elem.type).startswith("area"):
+                node1 = self._points.loc[elem.node1]
+                node2 = self._points.loc[elem.node2]
+                node3 = self._points.loc[elem.node3] if elem.type == 'area3' else self._points.loc[elem.node4] 
+                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
+                v2 = np.array([node3.x - node1.x, node3.y - node1.y, node3.z - node1.z])
+                v3 = np.cross(v1, v2)
+                v3 = v3/np.linalg.norm(v3)
+
+                v1 = np.cross([0, 1, 0], v3)
+                n1 = np.linalg.norm(v1)
+                v1 = np.cross(v3, [1, 0, 0]) if abs(n1) < 1.0e-10 else v1
+                v1 = v1/np.linalg.norm(v1)
+                v2 = np.cross(v3, v1)
+            elif str(elem.type).startswith("solid"):
+                v1 = np.array([1, 0, 0])
+                v2 = np.array([0, 1, 0])
+                v3 = np.array([0, 0, 1])
+            elif str(elem.type).startswith("point"):
+                v1 = np.array([1, 0, 0])
+                v2 = np.array([0, 1, 0])
+                v3 = np.array([0, 0, 1])
+            else:
+                raise ValueError('element type not recognized')
+            
+            normals[elem.element] = [v1, v2, v3]
+        return normals
 
     def save(self, filename: str, file_format: str = None):
         if file_format == None:
@@ -228,6 +305,24 @@ class xfemMesh:
         self._dirtypoints = True
         self._dirtyelements = True
         return
+
+    def set_points_elems_id(self, base: int = 1):
+        self._set_tags_to_id(base)     
+        self._points["id"] = self._points["point"].apply(lambda x: self._nodetag_to_id[x])
+        self._elements["id"] = self._elements["element"].apply(lambda x: self._elemtag_to_id[x])
+        self._dirtypoints = False
+        self._dirtyelements = False
+        return 
+
+    def set_indexes(self):
+        # if self._dirtyelements:
+        self._elements['ielement'] = self._elements['element'].copy()
+        self._elements.set_index('ielement', inplace=True)
+        self._dirtyelements = False
+        # if self._dirtypoints:
+        ipoint = self._points['point'].copy()
+        self._points.set_index(ipoint, inplace=True)
+        self._dirtypoints = False
 
     def read(self, filename: str, file_format: str = None):
         if file_format == None:
@@ -365,101 +460,6 @@ class xfemMesh:
         self._elements = elements
         self._dirtyelements = True
         return
-
-    def get_normals(self, convention: str = "") -> dict:
-        """
-            convention (str, optional): Defaults to "ofempy". 
-            can be "ofempy", "sap2000" or "femix".
-        """
-        convention = convention.lower()
-        if convention == "femix":
-            return self.get_normals_femix()
-        # elif convention == "sap2000" or convention == "ofempy":
-        else:
-            return self.get_normals_sap2000()
-
-    def get_normals_sap2000(self):
-        if self._dirty:
-            self.set_indexes()
-        normals = {}
-        for elem in self._elements.itertuples():
-            if str(elem.type).startswith("line"):
-                node1 = self._points.loc[elem.node1]
-                node2 = self._points.loc[elem.node2]
-                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
-                v1 = v1/np.linalg.norm(v1)
-                v3 = np.cross(v1, [0, 0, 1])
-                n3 = np.linalg.norm(v3)
-                v3 = [0, np.sign(v1[2]), 0] if abs(n3) < 1.0e-10 else v3/n3
-                v2 = np.cross(v3, v1)
-            elif str(elem.type).startswith("area"):
-                node1 = self._points.loc[elem.node1]
-                node2 = self._points.loc[elem.node2]
-                node3 = self._points.loc[elem.node3] if elem.type == 'area3' else self._points.loc[elem.node4] 
-                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
-                v2 = np.array([node3.x - node1.x, node3.y - node1.y, node3.z - node1.z])
-                v3 = np.cross(v1, v2)
-                v3 = v3/np.linalg.norm(v3)
-
-                v1 = np.cross([0, 0, 1], v3)
-                n1 = np.linalg.norm(v1)
-                v1 = [1, 0, 0] if abs(n1) < 1.0e-10 else v1
-                v1 = v1/np.linalg.norm(v1)
-                v2 = np.cross(v3, v1)
-            elif str(elem.type).startswith("solid"):
-                v1 = np.array([1, 0, 0])
-                v2 = np.array([0, 1, 0])
-                v3 = np.array([0, 0, 1])
-            elif str(elem.type).startswith("point"):
-                v1 = np.array([1, 0, 0])
-                v2 = np.array([0, 1, 0])
-                v3 = np.array([0, 0, 1])
-            else:
-                raise ValueError('element type not recognized')
-            
-            normals[elem.element] = [v1, v2, v3]
-        return normals
-
-    def get_normals_femix(self):
-        self.set_indexes()
-        normals = {}
-        for elem in self._elements.itertuples():
-            if str(elem.type).startswith("line"):
-                node1 = self._points.loc[elem.node1]
-                node2 = self._points.loc[elem.node2]
-                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
-                v1 = v1/np.linalg.norm(v1)
-                v3 = np.cross(v1, [0, 1, 0])
-                n3 = np.linalg.norm(v3)
-                v3 = [-np.sign(v1[2]), 0, 0] if abs(n3) < 1.0e-10 else v3/n3
-                v2 = np.cross(v3, v1)
-            elif str(elem.type).startswith("area"):
-                node1 = self._points.loc[elem.node1]
-                node2 = self._points.loc[elem.node2]
-                node3 = self._points.loc[elem.node3] if elem.type == 'area3' else self._points.loc[elem.node4] 
-                v1 = np.array([node2.x - node1.x, node2.y - node1.y, node2.z - node1.z])
-                v2 = np.array([node3.x - node1.x, node3.y - node1.y, node3.z - node1.z])
-                v3 = np.cross(v1, v2)
-                v3 = v3/np.linalg.norm(v3)
-
-                v1 = np.cross([0, 1, 0], v3)
-                n1 = np.linalg.norm(v1)
-                v1 = np.cross(v3, [1, 0, 0]) if abs(n1) < 1.0e-10 else v1
-                v1 = v1/np.linalg.norm(v1)
-                v2 = np.cross(v3, v1)
-            elif str(elem.type).startswith("solid"):
-                v1 = np.array([1, 0, 0])
-                v2 = np.array([0, 1, 0])
-                v3 = np.array([0, 0, 1])
-            elif str(elem.type).startswith("point"):
-                v1 = np.array([1, 0, 0])
-                v2 = np.array([0, 1, 0])
-                v3 = np.array([0, 0, 1])
-            else:
-                raise ValueError('element type not recognized')
-            
-            normals[elem.element] = [v1, v2, v3]
-        return normals
 
 
 class xfemStruct:
