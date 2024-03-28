@@ -1,6 +1,6 @@
 import os
 import logging
-from src.xdfem.xfemmesh import xfemStruct
+from src.xdfem.xfemmesh import xdfemStruct
 import src.xdfem.xfemmesh as xfemmesh
 import src.xdfem.ofem as ofem
 import src.xdfem.adapters as sap2000

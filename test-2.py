@@ -1,6 +1,6 @@
 import os
 import logging
-from src.xdfem.xfemmesh import xfemStruct
+from src.xdfem.xfemmesh import xdfemStruct
 import src.xdfem.ofem as ofem
 import src.xdfem.adapters.sap2000 as sap2000handler
 import shutil
@@ -22,7 +22,7 @@ logging.debug("\nSaving xfem.\n")
 off.save("tests/test_2.xdfem")
 
 logging.debug("\nWriting ofem.\n")
-hand = xfemStruct.to_ofempy(off, "tests/test_2.ofem")
+hand = xdfemStruct.to_ofempy(off, "tests/test_2.ofem")
 
 logging.debug("\nStart solving.\n")
 test = ofem.solve("tests/test_2.ofem", 'd', 1.0e-6)

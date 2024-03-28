@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 pd.set_option('mode.copy_on_write', True)
 #import eurocodepy as ec
-from . import libofempy
-from .xfemmesh import xfemStruct
+from . import libofemc
+from .xfemmesh import xdfemStruct
 # from . import ofemmesh
 from .common import *
 import gmsh
@@ -29,7 +29,7 @@ def run_gmsh(s):
 class Handler:
 
     @staticmethod
-    def to_ofempy(struct: xfemStruct, mesh_file: str):
+    def to_ofempy(struct: xdfemStruct, mesh_file: str):
         """Writes a ofem file
 
         Args:
@@ -40,7 +40,7 @@ class Handler:
         path = pathlib.Path(mesh_file)
 
         jobname = str(path.parent / (path.stem + ".ofem"))
-        ofem_file = libofempy.OfemSolverFile(jobname, overwrite=True)
+        ofem_file = libofemc.OfemSolverFile(jobname, overwrite=True)
 
         # nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(2, includeBoundary=True)
         # coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))
@@ -368,7 +368,7 @@ class Handler:
         return
 
     @staticmethod
-    def to_gmsh(struct: xfemStruct, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
+    def to_gmsh(struct: xdfemStruct, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
         """Writes a GMSH mesh file and opens it in GMSH
 
         Args:

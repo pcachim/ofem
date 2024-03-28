@@ -29,7 +29,7 @@ class Reader:
         physicalGroups = gmsh.model.getPhysicalGroups()
         attributes = gmsh.model.getAttributeNames()
 
-        self.ofem = xfemmesh.xfemStruct(gmsh.model.get_file_name())
+        self.ofem = xfemmesh.xdfemStruct(gmsh.model.get_file_name())
         self.ofem.file_name = self._filename
         
         # POINTS

@@ -944,7 +944,7 @@ class Reader:
         if not self._check_input(filename):
             raise ValueError('Filename id nt in correct format')
 
-        self.ofem = xfemmesh.xfemStruct("title stucture")
+        self.ofem = xfemmesh.xdfemStruct("title stucture")
         self.ofem.filename = self._filename
 
         joints = self.s2k['Joint Coordinates'.upper()]

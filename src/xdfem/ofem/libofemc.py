@@ -90,25 +90,26 @@ def drain_pipe():
 
 lib_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'libofemc.dylib')
 try:
-    libofempy = CDLL(lib_path)
+    print(f"Loading library 'libofemc' from {lib_path}")
+    libofemc = CDLL(lib_path)
 except:
     print("Cannot load library 'libofemc'")
     exit()
 
-preofemlib = libofempy.prefemixlib
+preofemlib = libofemc.prefemixlib
 preofemlib.restype = int
-ofemlib = libofempy.femixlib
+ofemlib = libofemc.femixlib
 ofemlib.restype = int
 
-# posfemixlib = libofempy.posfemixlib
+# posfemixlib = libofemc.posfemixlib
 # posfemixlib.restype = int
 
-posofemlib = libofempy.posofemlib
+posofemlib = libofemc.posofemlib
 posofemlib.restype = int
 
-preofemnllib = libofempy.prefemnllib
+preofemnllib = libofemc.prefemnllib
 preofemnllib.restype = int
-ofemnllib = libofempy.femnllib
+ofemnllib = libofemc.femnllib
 ofemnllib.restype = int
 
 ofemfilessuffix = ['.gldat', '.cmdat', '.log', '.nldat', '.srdat',

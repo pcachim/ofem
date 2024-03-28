@@ -1,2 +1,2 @@
-from .libofempy import OfemOptions, OfemSolverFile, OutputOptions
-from .libofempy import get_csv_from_ofem, results, solve
+from .libofemc import OfemOptions, OfemSolverFile, OutputOptions
+from .libofemc import get_csv_from_ofem, results, solve

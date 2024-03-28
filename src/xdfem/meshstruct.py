@@ -6,7 +6,7 @@ import gmsh
 import numpy as np
 import pathlib
 #import eurocodepy as ec
-from .ofem import libofempy
+from .ofem import libofemc
 from .common import *
 from . import gmshhandler
 
@@ -356,7 +356,7 @@ class Slab:
             mesh_file = path.with_suffix('').resolve() + ".gldat"
 
         jobname = str(path.parent / (path.stem + ".ofem"))
-        ofem_file = libofempy.OfemSolverFile(jobname, overwrite=True)
+        ofem_file = libofemc.OfemSolverFile(jobname, overwrite=True)
 
         nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(2, includeBoundary=True)
         coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))
@@ -536,14 +536,14 @@ class Slab:
 
         ofem_file.add(mesh_file)
         ofem_file.add(combo_file)
-        txt = libofempy.solve(jobname)
+        txt = libofemc.solve(jobname)
 
         options = {'csryn': 'n', 'ksres': 2, 'lcaco': 'c'}
         # codes = [ofemlib.DI_CSV, ofemlib.AST_CSV, ofemlib.EST_CSV, ofemlib.RS_CSV]
-        codes = [libofempy.DI_CSV, libofempy.AST_CSV, libofempy.EST_CSV]
-        txt = libofempy.results(jobname, codes, **options)
+        codes = [libofemc.DI_CSV, libofemc.AST_CSV, libofemc.EST_CSV]
+        txt = libofemc.results(jobname, codes, **options)
 
-        df = libofempy.get_csv_from_ofem(jobname, libofempy.DI_CSV)
+        df = libofemc.get_csv_from_ofem(jobname, libofemc.DI_CSV)
         for i in range(1, 4):
             t1 = gmsh.view.add("disp-" + str(i))
             dff = df.loc[df['icomb'] == 1]
@@ -562,7 +562,7 @@ class Slab:
         gmsh.view.addHomogeneousModelData(
                 t1, 0, "slab", "NodeData", dff["new_label"].values, displ, numComponents=3) 
 
-        df = libofempy.get_csv_from_ofem(jobname, libofempy.AST_CSV)
+        df = libofemc.get_csv_from_ofem(jobname, libofemc.AST_CSV)
         for i in range(1, 6):
             t1 = gmsh.view.add("str_avg-" + str(i))
             dff = df.loc[df['icomb'] == 1]
@@ -571,7 +571,7 @@ class Slab:
                     t1, 0, "slab", "NodeData", dff['new_label'].values, dff['str-'+str(i)].values) 
             gmsh.view.option.setNumber(t1, "Visible", 0)
 
-        df = libofempy.get_csv_from_ofem(jobname, libofempy.EST_CSV)
+        df = libofemc.get_csv_from_ofem(jobname, libofemc.EST_CSV)
         unique_values = [elemlist.get(item, item) for item in df["element"].unique().tolist()]
         for i in range(1, 6):
             t1 = gmsh.view.add("str_eln-" + str(i))
@@ -676,7 +676,7 @@ class Beam:
             mesh_file = path.with_suffix('').resolve() + ".gldat"
 
         jobname = str(path.parent / (path.stem + ".ofem"))
-        ofem_file = libofempy.OfemSolverFile(jobname, overwrite=True)
+        ofem_file = libofemc.OfemSolverFile(jobname, overwrite=True)
 
         nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(1, includeBoundary=True)
         coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))
@@ -848,27 +848,27 @@ class Beam:
             file.write("\n")
 
         jobname = str(path.parent / path.stem)
-        libofempy.solve(jobname)
+        libofemc.solve(jobname)
 
         options = {'csryn': 'n', 'ksres': 2}
-        codes = [libofempy.DI_CSV, libofempy.AST_CSV, libofempy.EST_CSV, libofempy.RS_CSV]
-        libofempy.results(jobname, codes, **options)
+        codes = [libofemc.DI_CSV, libofemc.AST_CSV, libofemc.EST_CSV, libofemc.RS_CSV]
+        libofemc.results(jobname, codes, **options)
 
-        df = libofempy.get_csv_from_ofem(jobname, libofempy.DI_CSV)
+        df = libofemc.get_csv_from_ofem(jobname, libofemc.DI_CSV)
         for i in range(1, 4):
             t1 = gmsh.view.add("disp-" + str(i))
             gmsh.view.addHomogeneousModelData(
                     t1, 0, "beam", "NodeData", df["point"].values, df['disp-'+str(i)].values) 
             gmsh.view.option.setNumber(t1, "Visible", 0)
 
-        df = libofempy.get_csv_from_ofem(jobname, libofempy.AST_CSV)
+        df = libofemc.get_csv_from_ofem(jobname, libofemc.AST_CSV)
         for i in range(1, 6):
             t1 = gmsh.view.add("str_avg-" + str(i))
             gmsh.view.addHomogeneousModelData(
                     t1, 0, "beam", "NodeData", df['point'].values, df['str-'+str(i)].values) 
             gmsh.view.option.setNumber(t1, "Visible", 0)
 
-        df = libofempy.get_csv_from_ofem(jobname, libofempy.EST_CSV)
+        df = libofemc.get_csv_from_ofem(jobname, libofemc.EST_CSV)
         unique_values = [elemlist.get(item, item) for item in df["element"].unique().tolist()]
         for i in range(1, 6):
             t1 = gmsh.view.add("str_eln-" + str(i))

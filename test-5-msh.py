@@ -10,7 +10,7 @@ import gmsh, sys
 
 fname = os.path.join( os.getcwd(), "tests/untitled.msh")
 
-off = xfemmesh.xfemStruct.import_msh(fname)
+off = xfemmesh.xdfemStruct.import_msh(fname)
 off.save(file_format=".xlsx")
 off.export_msh(fname + ".msh")
 off.solve()

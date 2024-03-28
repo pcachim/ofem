@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xdfem"
-version = "2024.3.2"
+version = "2024.3.4"
 requires-python = ">=3.9"
 authors = [
     {name = "Paulo Cachim", email = "pcachim@ua.pt"},
@@ -28,7 +28,9 @@ dependencies = [
     "matplotlib",
     "pyarrow",
     "h5py",
-    "gmsh"
+    "gmsh",
+    "meshio",
+    "openpyxl"
 ]
 
 # [project.optional-dependencies]

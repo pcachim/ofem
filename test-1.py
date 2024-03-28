@@ -14,11 +14,11 @@ print(Path.home())
 
 # Test ofem
 fname = os.path.join( os.getcwd(), "tests/cyl2")
-ofile = ofem.libofempy.OfemSolverFile(fname)
-ofem.libofempy.solve(fname, 'd', 1.0e-6)
+ofile = ofem.libofemc.OfemSolverFile(fname)
+ofem.libofemc.solve(fname, 'd', 1.0e-6)
 options = {'csryn': 'n', 'ksres': 2, 'lcaco': 'c'}
-codes = [ofem.libofempy.DI_CSV, ofem.libofempy.AST_CSV, ofem.libofempy.EST_CSV]
-ofem.libofempy.results(fname, codes, **options)
+codes = [ofem.libofemc.DI_CSV, ofem.libofemc.AST_CSV, ofem.libofemc.EST_CSV]
+ofem.libofemc.results(fname, codes, **options)
 
 
 # Test ofemnl
@@ -37,8 +37,8 @@ ofem.libofempy.results(fname, codes, **options)
 
 fname = os.path.join( os.getcwd(), "tests/demo.gldat")
 mat = {'E': 30000000, 'nu': 0.3, 'rho': 25.0, 'alpha': 1.0e-5}
-slab = src.ofempy.Slab()
-slab.addGeometry(src.ofempy.meshstruct.CIRCULAR_WITH_HOLE, (0, 0, 0), 3, 1, 0.2,
+slab = src.xdfem.Slab()
+slab.addGeometry(src.xdfem.meshstruct.CIRCULAR_WITH_HOLE, (0, 0, 0), 3, 1, 0.2,
                 boundary=[0, 0, 1, 1], material=mat, thick=0.25, load=-10.0)
 
 # slab.addGeometry(msh.meshstruct.CIRCULAR_QUARTER, (0, 0, 0), 3, 0*math.pi/180, 0.2,
@@ -61,7 +61,7 @@ slab.run()
 
 #fname = os.path.join( os.getcwd(), "tests/test.s2k")
 fname = os.path.join( os.getcwd(), "tests/test.xlsx")
-s2000 = src.ofempy.sap2000.Reader(fname)
+s2000 = src.xdfem.sap2000.Reader(fname)
 # s2000.to_femix()
 # fname = os.path.join( os.getcwd(), "test.xlsx")
 # s2000.read_excel(fname, 'pandas')

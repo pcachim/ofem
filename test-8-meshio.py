@@ -1,6 +1,6 @@
 import os
 import logging
-from src.xdfem.xfemmesh import xfemStruct
+from src.xdfem.xfemmesh import xdfemStruct
 import src.xdfem.ofem as ofem
 import src.xdfem.sap2000handler as sap2000handler
 import shutil

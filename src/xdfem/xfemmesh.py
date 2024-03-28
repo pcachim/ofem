@@ -1,7 +1,7 @@
 DEBUG = True
 
 from . import common
-from .ofem.libofempy import OfemSolverFile
+from .ofem.libofemc import OfemSolverFile
 from . import ofem
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -75,7 +75,7 @@ def run_gmsh(s):
     gmsh.finalize()
 
 
-class xfemMesh:
+class xdfemMesh:
     
     def __init__(self, title: str):
         self.title = title
@@ -462,14 +462,14 @@ class xfemMesh:
         return
 
 
-class xfemStruct:
+class xdfemStruct:
 
     def __init__(self, title: str):
         self._title = title
         self._dirty = [False for i in range(NTABLES)]
         self._filename = None
         # GEOMETRY
-        self._mesh: xfemMesh = xfemMesh(self._title)
+        self._mesh: xdfemMesh = xdfemMesh(self._title)
         # MATERIALS AND SECTIONS
         self._sections = pd.DataFrame(columns= ["section", "type", "material"])
         self._supports = pd.DataFrame(columns= ["point", "ux", "uy", "uz", "rx", "ry", "rz"])
@@ -483,7 +483,7 @@ class xfemStruct:
         self._arealoads = pd.DataFrame(columns= ["element", "loadcase", 'direction', "px", "py", "pz"])
         self._solidloads = pd.DataFrame(columns= ["element", "loadcase", "fx", "fy", "fz", "mx", "my", "mz"])
         # RESULTS
-        self._results: xfemData = xfemData()
+        self._results: xdfemData = xdfemData()
         # GROUPS
         self._groups = pd.DataFrame(columns= ["group", "type", "point", "element"])
         return
@@ -994,24 +994,24 @@ class xfemStruct:
         point_map = dict(zip(self.mesh.points['id'], self.mesh.points['point']))
         element_map = dict(zip(self.mesh.elements['id'], self.mesh.elements['element']))
 
-        dt =  ofem.get_csv_from_ofem(filename, ofem.libofempy.DI_CSV)
+        dt =  ofem.get_csv_from_ofem(filename, ofem.libofemc.DI_CSV)
         dt['point'] = dt['point'].map(point_map)
         self._results.add("displacements", dt)
 
-        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.RE_CSV)
+        dt = ofem.get_csv_from_ofem(filename, ofem.libofemc.RE_CSV)
         dt['point'] = dt['point'].map(point_map)
         self._results.add("reactions", dt)
 
-        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.AST_CSV)
+        dt = ofem.get_csv_from_ofem(filename, ofem.libofemc.AST_CSV)
         dt['point'] = dt['point'].map(point_map)
         self._results.add("stresses_avg", dt)
 
-        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.EST_CSV)
+        dt = ofem.get_csv_from_ofem(filename, ofem.libofemc.EST_CSV)
         dt['element'] = dt['element'].map(element_map)
         dt['point'] = dt['point'].map(point_map)
         self._results.add("stresses_eln", dt)
 
-        dt = ofem.get_csv_from_ofem(filename, ofem.libofempy.GST_CSV)
+        dt = ofem.get_csv_from_ofem(filename, ofem.libofemc.GST_CSV)
         dt['element'] = dt['element'].map(element_map)
         self._results.add("stresses_gauss", dt)
 
@@ -1800,7 +1800,7 @@ class xfemStruct:
         return self._loadcases.shape[0]
 
 
-class xfemData:
+class xdfemData:
     def __init__(self) -> None:
         self._collection = {}
 
