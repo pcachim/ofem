@@ -17,7 +17,7 @@ from . import adapters
 # pd.options.mode.copy_on_write = True
 elemtypes = list(common.ofem_meshio.keys())
 
-NTABLES = 10
+NTABLES = 11
 
 SECTIONS = 0
 SUPPORTS = 1
@@ -29,6 +29,7 @@ AREALOADS = 6
 SOLIDLOADS = 7
 LOADCASES = 8
 LOADCOMBINATIONS = 9
+GROUPS = 10
 
 def replace_bytesio_in_zip(zip_path, target_filename, new_contents):
     # Create a temporary filename for the new ZIP file
@@ -485,63 +486,8 @@ class xdfemStruct:
         # RESULTS
         self._results: xdfemData = xdfemData()
         # GROUPS
-        self._groups = pd.DataFrame(columns= ["group", "type", "point", "element"])
+        self._groups = pd.DataFrame(columns= ["group", "point", "line", "area", "solid"])
         return
-
-    @staticmethod
-    def import_sap2000(filename: str):
-        return adapters.sap2000.Reader(filename).to_ofem_struct()
-
-    @staticmethod
-    def import_msh(filename: str):
-        return adapters.msh.Reader(filename).to_ofem_struct()
-
-    def get_combos(self):
-        combos = {k: {"type": "", "coefs": {}} for k in self._loadcombinations['combo'].unique().tolist()}
-        for k in combos.keys():
-            for combo in self._loadcombinations[self._loadcombinations['combo'] == k].itertuples():
-                if combo.type is not None:
-                    combos[k]["type"] = combo.type
-                combos[k]["coefs"][combo.case] = combo.coef
-            # combo = self._loadcombinations[self._loadcombinations['combination'] == k]
-            # combos[k] = {k: v for k, v in zip(combo['loadcase'], combo['coef'])}          
-        return combos
-    
-    def get_cases(self):
-        ### falta implementar a direção
-
-        cases = {
-            k: {"index": 0, "name": "", "type": "dead", "point": {}, "line": {}, "area": {}, 
-                "temp": {}, "grav": {}, "displ": {}} 
-            for k in self._loadcases['case'].unique().tolist()}
-
-        for i, k in enumerate(cases.keys()):
-            case = self._loadcases[self._loadcases['case'] == k].iloc[0]
-            cases[k]["name"] = case.case
-            cases[k]["type"] = case.type
-            cases[k]["index"] = i + 1
-            # go through gravity loads
-            cases[k]["grav"] = -case.gravity if case.gravity is not None else 0
-            # go through point loads
-            if not self._pointloads.empty:
-                for load in self._pointloads[self._pointloads['loadcase'] == k].itertuples():
-                    if not load.point in cases[k]["point"]:
-                        cases[k]["point"][load.point] = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-                    cases[k]["point"][load.point] += np.array([load.fx, load.fy, load.fz, load.mx, load.my, load.mz])
-            # go through line loads
-            if not self._lineloads.empty:
-                for load in self._lineloads[self._lineloads['loadcase'] == k].itertuples():
-                    if not load.element in cases[k]["line"]:
-                        cases[k]["line"][load.element] = np.array([0.0, 0.0, 0.0, 0.0])
-                    cases[k]["line"][load.element] += np.array([load.fx, load.fy, load.fz, load.mx])
-            # go through area loads
-            if not self._arealoads.empty:
-                for load in self._arealoads[self._arealoads['loadcase'] == k].itertuples():
-                    if not load.element in cases[k]["area"]:
-                        cases[k]["area"][load.element] = np.array([0.0, 0.0, 0.0])
-                    cases[k]["area"][load.element] += np.array([load.px, load.py, load.pz])
-
-        return cases
 
     def export_msh(self, filename: str, model: str = 'geometry', entities: str = 'sections'):
         """Writes a GMSH mesh file and opens it in GMSH
@@ -557,7 +503,7 @@ class xdfemStruct:
         if model not in ['geometry', 'loads']:
             raise ValueError('model must be "geometry" or "loads"')
 
-        if entities not in ['types', 'sections', 'materials']:
+        if entities not in ['groups', 'types', 'sections', 'materials']:
             raise ValueError('entities must be "types", "sections" or "materials"')
 
         if DEBUG:
@@ -583,7 +529,6 @@ class xdfemStruct:
 
         gmsh.finalize()
 
-        
         # run_gmsh(filename)
 
         return
@@ -730,6 +675,61 @@ class xdfemStruct:
 
         return
 
+    def get_combos(self):
+        combos = {k: {"type": "", "coefs": {}} for k in self._loadcombinations['combo'].unique().tolist()}
+        for k in combos.keys():
+            for combo in self._loadcombinations[self._loadcombinations['combo'] == k].itertuples():
+                if combo.type is not None:
+                    combos[k]["type"] = combo.type
+                combos[k]["coefs"][combo.case] = combo.coef
+            # combo = self._loadcombinations[self._loadcombinations['combination'] == k]
+            # combos[k] = {k: v for k, v in zip(combo['loadcase'], combo['coef'])}          
+        return combos
+    
+    def get_cases(self):
+        ### falta implementar a direção
+
+        cases = {
+            k: {"index": 0, "name": "", "type": "dead", "point": {}, "line": {}, "area": {}, 
+                "temp": {}, "grav": {}, "displ": {}} 
+            for k in self._loadcases['case'].unique().tolist()}
+
+        for i, k in enumerate(cases.keys()):
+            case = self._loadcases[self._loadcases['case'] == k].iloc[0]
+            cases[k]["name"] = case.case
+            cases[k]["type"] = case.type
+            cases[k]["index"] = i + 1
+            # go through gravity loads
+            cases[k]["grav"] = -case.gravity if case.gravity is not None else 0
+            # go through point loads
+            if not self._pointloads.empty:
+                for load in self._pointloads[self._pointloads['loadcase'] == k].itertuples():
+                    if not load.point in cases[k]["point"]:
+                        cases[k]["point"][load.point] = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+                    cases[k]["point"][load.point] += np.array([load.fx, load.fy, load.fz, load.mx, load.my, load.mz])
+            # go through line loads
+            if not self._lineloads.empty:
+                for load in self._lineloads[self._lineloads['loadcase'] == k].itertuples():
+                    if not load.element in cases[k]["line"]:
+                        cases[k]["line"][load.element] = np.array([0.0, 0.0, 0.0, 0.0])
+                    cases[k]["line"][load.element] += np.array([load.fx, load.fy, load.fz, load.mx])
+            # go through area loads
+            if not self._arealoads.empty:
+                for load in self._arealoads[self._arealoads['loadcase'] == k].itertuples():
+                    if not load.element in cases[k]["area"]:
+                        cases[k]["area"][load.element] = np.array([0.0, 0.0, 0.0])
+                    cases[k]["area"][load.element] += np.array([load.px, load.py, load.pz])
+
+        return cases
+
+    @staticmethod
+    def import_sap2000(filename: str):
+        return adapters.sap2000.Reader(filename).to_ofem_struct()
+
+    @staticmethod
+    def import_msh(filename: str):
+        return adapters.msh.Reader(filename).to_xdfem_struct()
+
     def read_excel(self, filename: str):
         path = Path(filename)
         if path.suffix == ".xlsx":
@@ -797,6 +797,10 @@ class xdfemStruct:
             self._loadcombinations = dfs["loadcombinations"]
             self._dirty[LOADCOMBINATIONS] = True
 
+        # groups
+        if "groups" in dfs:
+            self._groups = dfs["groups"]
+            self._dirty[GROUPS] = True
         return
 
     def read_xdfem(self, filename: str): 
@@ -813,7 +817,7 @@ class xdfemStruct:
                 self.mesh.from_dict(data)
             with zip_file.open('data.json') as json_file:
                 data = json.load(json_file)
-                self._results.from_dict(data)
+                self._results._from_dict(data)
 
         self._filename = path.parent / path.stem
         return
@@ -887,6 +891,9 @@ class xdfemStruct:
                 self._arealoads.to_excel(writer, sheet_name='arealoads', index=False)
             if not self._solidloads.empty:
                 self._solidloads.to_excel(writer, sheet_name='solidloads', index=False)
+            if not self._groups.empty:
+                self._groups.to_excel(writer, sheet_name='groups', index=False)
+
             if 'displacements'in self._results.items.keys():
                 self._results.items['displacements'].to_excel(writer, sheet_name='displacements', index=False)
             if 'reactions' in self._results.items.keys():
@@ -1033,7 +1040,8 @@ class xdfemStruct:
             "arealoads": self._arealoads.to_dict(orient="records"),
             "solidloads": self._solidloads.to_dict(orient="records"),
             "loadcases": self._loadcases.to_dict(orient="records"),
-            "loadcombinations": self._loadcombinations.to_dict(orient="records")
+            "loadcombinations": self._loadcombinations.to_dict(orient="records"),
+            "groups": self._groups.to_dict(orient="records")
         }
 
     def to_meshio(self):
