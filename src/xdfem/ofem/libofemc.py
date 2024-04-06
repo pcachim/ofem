@@ -115,7 +115,7 @@ ofemnllib.restype = int
 ofemfilessuffix = ['.gldat', '.cmdat', '.log', '.nldat', '.srdat',
                 '_gl.bin', '_re.bin', '_di.bin', '_sd.bin', '_st.bin', 
                 '_nl.bin', '_sn.bin', '_ff.bin', '_st.bin',
-                '_di.csv', '_avgst.csv', '_elnst.csv', 
+                '_di.csv', '_avgst.csv', '_elnst.csv', '_info.csv',
                 '_gpstr.csv', '_react.csv', '_fixfo.csv', '_csv.info', '.out']
 
 class OfemOptions:

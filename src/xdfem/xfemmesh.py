@@ -465,7 +465,7 @@ class xdfemMesh:
 
 class xdfemStruct:
 
-    def __init__(self, title: str):
+    def __init__(self, title: str = "New Model"):
         self._title = title
         self._dirty = [False for i in range(NTABLES)]
         self._filename = None
@@ -517,7 +517,7 @@ class xdfemStruct:
         gmsh.model.add(modelname)
         gmsh.model.setFileName(filename)
         
-        self.to_gmsh(filename, model, entities)
+        self.to_gmsh(model, entities)
 
         # SAVE GEOMETRIC DATA
         gmsh.option.setNumber("Mesh.SaveAll", 1)
@@ -558,7 +558,7 @@ class xdfemStruct:
         gmsh.model.add(modelname)
         gmsh.model.setFileName(filename)
 
-        self.to_gmsh(filename, model, entities)
+        self.to_gmsh(model, entities)
 
         gmsh.option.setNumber("Mesh.SaveAll", 1)
         gmsh.write(filename)
@@ -1113,7 +1113,7 @@ class xdfemStruct:
 
         return mesh
 
-    def to_gmsh(self, mesh_file: str, model: str = 'geometry', entities: str = 'sections'):
+    def to_gmsh(self, model: str = 'geometry', entities: str = 'sections'):
 
         self.set_indexes()
         self.mesh.set_points_elems_id(1)

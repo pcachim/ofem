@@ -1,0 +1,787 @@
+### Main title of the problem
+/Users/paulocachim/MyFiles/github/xdfem/tests/untitled.msh
+
+### Main parameters
+  102 # nelem (n. of elements in the mesh)
+   52 # npoin (n. of points in the mesh)
+   12 # nvfix (n. of points with fixed degrees of freedom)
+    2 # ncase (n. of load cases)
+    2 # nselp (n. of sets of element parameters)
+    2 # nmats (n. of sets of material properties)
+    2 # nspen (n. of sets of element nodal properties)
+    3 # nmdim (n. of geometric dimensions)
+    0 # nnscs (n. of nodes with specified coordinate systems)
+    0 # nsscs (n. of sets of specified coordinate systems)
+    0 # nncod (n. of nodes with constrained d.o.f.)
+    0 # nnecc (n. of nodes with eccentric connections)
+
+### Sets of element parameters
+# iselp
+      1
+# element parameters
+    9 # ntype (n. of element type)
+    3 # nnode (n. of nodes per element)
+    3 # ngauq (n. of Gaussian quadrature) (stiffness)
+    1 # ngaus (n. of Gauss points in the formulation) (stiffness)
+    3 # ngstq (n. of Gaussian quadrature) (stresses)
+    1 # ngstr (n. of Gauss points in the formulation) (stresses)
+# iselp
+      2
+# element parameters
+    7 # ntype (n. of element type)
+    2 # nnode (n. of nodes per element)
+    1 # ngauq (n. of Gaussian quadrature) (stiffness)
+    2 # ngaus (n. of Gauss points in the formulation) (stiffness)
+    1 # ngstq (n. of Gaussian quadrature) (stresses)
+    2 # ngstr (n. of Gauss points in the formulation) (stresses)
+
+### Sets of material properties
+### (Young modulus, Poisson ratio, mass/volume and thermic coeff.
+# imats         young        poiss        dense        alpha
+      1  30000000.00000000       0.20000000      25.00000000       0.00001000
+### (Young modulus, Poisson ratio, mass/volume and thermic coeff.
+# imats         young        poiss        dense        alpha
+      2  200000000.00000000       0.30000000      77.00000000       0.00001000
+
+### Sets of element nodal properties
+# ispen
+      1
+# inode       barea        binet        bin2l        bin3l        bangl(deg)
+      1           0.15000000        0.00000100       0.00300000        0.00100000       0.00000000
+      2           0.15000000        0.00000100       0.00300000        0.00100000       0.00000000
+# ispen
+      2
+# inode       thick
+      1           0.25000000
+      2           0.25000000
+      3           0.25000000
+
+### Element parameter index, material properties index, element nodal
+### properties index and list of the nodes of each element
+# ielem ielps matno ielnp       lnods ...
+      1     2     2     1            1        4
+      2     2     2     1            4        5
+      3     2     2     1            5        6
+      4     2     2     1            6        7
+      5     2     2     1            7        8
+      6     2     2     1            8        9
+      7     2     2     1            9       10
+      8     2     2     1            2       10
+      9     2     2     1            2       11
+     10     2     2     1           11       12
+     11     2     2     1           12       13
+     12     2     2     1           13       14
+     13     2     2     1           14       15
+     14     2     2     1           15       16
+     15     2     2     1           16       17
+     16     2     2     1            3       17
+     17     2     2     1            3       18
+     18     2     2     1           18       19
+     19     2     2     1           19       20
+     20     2     2     1           20       21
+     21     2     2     1           21       22
+     22     2     2     1           22       23
+     23     2     2     1           23       24
+     24     2     2     1           24       25
+     25     2     2     1           25       26
+     26     2     2     1            1       26
+     27     1     2     2           32       30       36
+     28     1     2     2           32       36       43
+     29     1     2     2           39       29       44
+     30     1     2     2           29       39       47
+     31     1     2     2            4       26        1
+     32     1     2     2           18       17        3
+     33     1     2     2           42       29       47
+     34     1     2     2           38       39       44
+     35     1     2     2           35       42       47
+     36     1     2     2           30       33       36
+     37     1     2     2           33       34       36
+     38     1     2     2           30       21       33
+     39     1     2     2           23       24       37
+     40     1     2     2           30       32       50
+     41     1     2     2           33       28       34
+     42     1     2     2           25       41       48
+     43     1     2     2           34       28       35
+     44     1     2     2           22       28       33
+     45     1     2     2           20       21       30
+     46     1     2     2           26        4       46
+     47     1     2     2           17       18       45
+     48     1     2     2           22       23       28
+     49     1     2     2           21       22       33
+     50     1     2     2           28       23       37
+     51     1     2     2            4        5       46
+     52     1     2     2           16       17       45
+     53     1     2     2           35       28       37
+     54     1     2     2           40       19       50
+     55     1     2     2           11       12       38
+     56     1     2     2           25       26       46
+     57     1     2     2           18       19       45
+     58     1     2     2           12       13       27
+     59     1     2     2            8        9       29
+     60     1     2     2            7        8       42
+     61     1     2     2           14       15       32
+     62     1     2     2           13       14       43
+     63     1     2     2           12       27       38
+     64     1     2     2           24       25       48
+     65     1     2     2            6        7       31
+     66     1     2     2           48       31       52
+     67     1     2     2           38       27       39
+     68     1     2     2           15       16       40
+     69     1     2     2            5        6       41
+     70     1     2     2            8       29       42
+     71     1     2     2           27       13       43
+     72     1     2     2           14       32       43
+     73     1     2     2           31        7       42
+     74     1     2     2           32       15       40
+     75     1     2     2           29        9       44
+     76     1     2     2           19       20       50
+     77     1     2     2            6       31       41
+     78     1     2     2            9       10       44
+     79     1     2     2           37       48       52
+     80     1     2     2           36       34       51
+     81     1     2     2            2       11       49
+     82     1     2     2           10        2       49
+     83     1     2     2           34       39       51
+     84     1     2     2           19       40       45
+     85     1     2     2           41       25       46
+     86     1     2     2           39       34       47
+     87     1     2     2           32       40       50
+     88     1     2     2           27       43       51
+     89     1     2     2           37       24       48
+     90     1     2     2           34       35       47
+     91     1     2     2           41       31       48
+     92     1     2     2           43       36       51
+     93     1     2     2           20       30       50
+     94     1     2     2           40       16       45
+     95     1     2     2            5       41       46
+     96     1     2     2           35       37       52
+     97     1     2     2           11       38       49
+     98     1     2     2           39       27       51
+     99     1     2     2           44       10       49
+    100     1     2     2           38       44       49
+    101     1     2     2           31       42       52
+    102     1     2     2           42       35       52
+
+### Coordinates of the points
+# ipoin            coord-x            coord-y            coord-z
+      1          0.00000000         0.00000000         0.00000000
+      2          1.00000000         0.00000000         0.00000000
+      3          1.00000000         1.00000000         0.00000000
+      4          0.12500000         0.00000000         0.00000000
+      5          0.25000000         0.00000000         0.00000000
+      6          0.37500000         0.00000000         0.00000000
+      7          0.50000000         0.00000000         0.00000000
+      8          0.62500000         0.00000000         0.00000000
+      9          0.75000000         0.00000000         0.00000000
+     10          0.87500000         0.00000000         0.00000000
+     11          1.00000000         0.12500000         0.00000000
+     12          1.00000000         0.25000000         0.00000000
+     13          1.00000000         0.37500000         0.00000000
+     14          1.00000000         0.50000000         0.00000000
+     15          1.00000000         0.62500000         0.00000000
+     16          1.00000000         0.75000000         0.00000000
+     17          1.00000000         0.87500000         0.00000000
+     18          0.90000000         0.90000000         0.00000000
+     19          0.80000000         0.80000000         0.00000000
+     20          0.70000000         0.70000000         0.00000000
+     21          0.60000000         0.60000000         0.00000000
+     22          0.50000000         0.50000000         0.00000000
+     23          0.40000000         0.40000000         0.00000000
+     24          0.30000000         0.30000000         0.00000000
+     25          0.20000000         0.20000000         0.00000000
+     26          0.10000000         0.10000000         0.00000000
+     27          0.89463991         0.30691977         0.00000000
+     28          0.53717098         0.36509121         0.00000000
+     29          0.70186439         0.11220149         0.00000000
+     30          0.73660254         0.56339746         0.00000000
+     31          0.43386899         0.10014782         0.00000000
+     32          0.86897883         0.55634246         0.00000000
+     33          0.63545390         0.46457996         0.00000000
+     34          0.68280380         0.32828088         0.00000000
+     35          0.56964875         0.24014921         0.00000000
+     36          0.76981107         0.44860323         0.00000000
+     37          0.44316439         0.26946994         0.00000000
+     38          0.89955589         0.18714497         0.00000000
+     39          0.78171850         0.23377795         0.00000000
+     40          0.89451905         0.69634883         0.00000000
+     41          0.30560495         0.10263613         0.00000000
+     42          0.56782103         0.11457847         0.00000000
+     43          0.88930053         0.42139734         0.00000000
+     44          0.81954481         0.10399905         0.00000000
+     45          0.90861928         0.79741300         0.00000000
+     46          0.20176421         0.08972567         0.00000000
+     47          0.66629979         0.20839200         0.00000000
+     48          0.35706126         0.20149811         0.00000000
+     49          0.90913009         0.09086991         0.00000000
+     50          0.79664802         0.65760113         0.00000000
+     51          0.80237339         0.34151861         0.00000000
+     52          0.48165244         0.18289048         0.00000000
+
+### Points with fixed degrees of freedom and fixity codes (1-fixed0-free)
+# ivfix  nofix       ifpre ...
+      1      1           1      1      1      1      1      1
+      2      2           1      1      1      1      1      1
+      3      3           1      1      1      1      1      1
+      4     18           1      1      1      0      0      0
+      5     19           1      1      1      0      0      0
+      6     20           1      1      1      0      0      0
+      7     21           1      1      1      0      0      0
+      8     22           1      1      1      0      0      0
+      9     23           1      1      1      0      0      0
+     10     24           1      1      1      0      0      0
+     11     25           1      1      1      0      0      0
+     12     26           1      1      1      0      0      0
+
+# ===================================================================
+
+### Load case n.        1
+
+### Title of the load case
+DEAD
+
+### Load parameters
+    0 # nplod (n. of point loads in nodal points)
+    0 # ngrav (gravity load flag: 1-yes0-no)
+    0 # nedge (n. of edge loads) (F.E.M. only)
+   76 # nface (n. of face loads) (F.E.M. only)
+    0 # ntemp (n. of points with temperature variation) (F.E.M. only)
+    0 # nudis (n. of uniformly distributed loads (3d frames and trusses only)
+    0 # nepoi (n. of element point loads) (3d frames and trusses only)
+    0 # nprva (n. of prescribed and non zero degrees of freedom)
+
+### Gravity load (gravity acceleration)
+### (global coordinate system)
+#      gravi-x      gravi-y     gravi-z
+
+### Point loads in nodal points
+### (global coordinate system)
+# iplod  lopop    pload-x    pload-y    pload-z   pload-tx   pload-ty   pload-tz
+
+### Face load (loaded element, loaded points and load value)
+### (local coordinate system)
+# iface  loelf
+      1     27
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     32       0.000      0.000    -15.000      0.000      0.000      0.000
+     30       0.000      0.000    -15.000      0.000      0.000      0.000
+     36       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+      2     28
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     32       0.000      0.000    -15.000      0.000      0.000      0.000
+     36       0.000      0.000    -15.000      0.000      0.000      0.000
+     43       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+      3     29
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     39       0.000      0.000    -15.000      0.000      0.000      0.000
+     29       0.000      0.000    -15.000      0.000      0.000      0.000
+     44       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+      4     30
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     29       0.000      0.000    -15.000      0.000      0.000      0.000
+     39       0.000      0.000    -15.000      0.000      0.000      0.000
+     47       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+      5     31
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+      4       0.000      0.000    -15.000      0.000      0.000      0.000
+     26       0.000      0.000    -15.000      0.000      0.000      0.000
+      1       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+      6     32
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     18       0.000      0.000    -15.000      0.000      0.000      0.000
+     17       0.000      0.000    -15.000      0.000      0.000      0.000
+      3       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+      7     33
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     42       0.000      0.000    -15.000      0.000      0.000      0.000
+     29       0.000      0.000    -15.000      0.000      0.000      0.000
+     47       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+      8     34
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     38       0.000      0.000    -15.000      0.000      0.000      0.000
+     39       0.000      0.000    -15.000      0.000      0.000      0.000
+     44       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+      9     35
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     35       0.000      0.000    -15.000      0.000      0.000      0.000
+     42       0.000      0.000    -15.000      0.000      0.000      0.000
+     47       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     10     36
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     30       0.000      0.000    -15.000      0.000      0.000      0.000
+     33       0.000      0.000    -15.000      0.000      0.000      0.000
+     36       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     11     37
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     33       0.000      0.000    -15.000      0.000      0.000      0.000
+     34       0.000      0.000    -15.000      0.000      0.000      0.000
+     36       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     12     38
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     30       0.000      0.000    -15.000      0.000      0.000      0.000
+     21       0.000      0.000    -15.000      0.000      0.000      0.000
+     33       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     13     39
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     23       0.000      0.000    -15.000      0.000      0.000      0.000
+     24       0.000      0.000    -15.000      0.000      0.000      0.000
+     37       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     14     40
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     30       0.000      0.000    -15.000      0.000      0.000      0.000
+     32       0.000      0.000    -15.000      0.000      0.000      0.000
+     50       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     15     41
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     33       0.000      0.000    -15.000      0.000      0.000      0.000
+     28       0.000      0.000    -15.000      0.000      0.000      0.000
+     34       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     16     42
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     25       0.000      0.000    -15.000      0.000      0.000      0.000
+     41       0.000      0.000    -15.000      0.000      0.000      0.000
+     48       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     17     43
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     34       0.000      0.000    -15.000      0.000      0.000      0.000
+     28       0.000      0.000    -15.000      0.000      0.000      0.000
+     35       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     18     44
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     22       0.000      0.000    -15.000      0.000      0.000      0.000
+     28       0.000      0.000    -15.000      0.000      0.000      0.000
+     33       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     19     45
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     20       0.000      0.000    -15.000      0.000      0.000      0.000
+     21       0.000      0.000    -15.000      0.000      0.000      0.000
+     30       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     20     46
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     26       0.000      0.000    -15.000      0.000      0.000      0.000
+      4       0.000      0.000    -15.000      0.000      0.000      0.000
+     46       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     21     47
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     17       0.000      0.000    -15.000      0.000      0.000      0.000
+     18       0.000      0.000    -15.000      0.000      0.000      0.000
+     45       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     22     48
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     22       0.000      0.000    -15.000      0.000      0.000      0.000
+     23       0.000      0.000    -15.000      0.000      0.000      0.000
+     28       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     23     49
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     21       0.000      0.000    -15.000      0.000      0.000      0.000
+     22       0.000      0.000    -15.000      0.000      0.000      0.000
+     33       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     24     50
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     28       0.000      0.000    -15.000      0.000      0.000      0.000
+     23       0.000      0.000    -15.000      0.000      0.000      0.000
+     37       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     25     51
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+      4       0.000      0.000    -15.000      0.000      0.000      0.000
+      5       0.000      0.000    -15.000      0.000      0.000      0.000
+     46       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     26     52
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     16       0.000      0.000    -15.000      0.000      0.000      0.000
+     17       0.000      0.000    -15.000      0.000      0.000      0.000
+     45       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     27     53
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     35       0.000      0.000    -15.000      0.000      0.000      0.000
+     28       0.000      0.000    -15.000      0.000      0.000      0.000
+     37       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     28     54
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     40       0.000      0.000    -15.000      0.000      0.000      0.000
+     19       0.000      0.000    -15.000      0.000      0.000      0.000
+     50       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     29     55
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     11       0.000      0.000    -15.000      0.000      0.000      0.000
+     12       0.000      0.000    -15.000      0.000      0.000      0.000
+     38       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     30     56
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     25       0.000      0.000    -15.000      0.000      0.000      0.000
+     26       0.000      0.000    -15.000      0.000      0.000      0.000
+     46       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     31     57
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     18       0.000      0.000    -15.000      0.000      0.000      0.000
+     19       0.000      0.000    -15.000      0.000      0.000      0.000
+     45       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     32     58
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     12       0.000      0.000    -15.000      0.000      0.000      0.000
+     13       0.000      0.000    -15.000      0.000      0.000      0.000
+     27       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     33     59
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+      8       0.000      0.000    -15.000      0.000      0.000      0.000
+      9       0.000      0.000    -15.000      0.000      0.000      0.000
+     29       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     34     60
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+      7       0.000      0.000    -15.000      0.000      0.000      0.000
+      8       0.000      0.000    -15.000      0.000      0.000      0.000
+     42       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     35     61
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     14       0.000      0.000    -15.000      0.000      0.000      0.000
+     15       0.000      0.000    -15.000      0.000      0.000      0.000
+     32       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     36     62
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     13       0.000      0.000    -15.000      0.000      0.000      0.000
+     14       0.000      0.000    -15.000      0.000      0.000      0.000
+     43       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     37     63
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     12       0.000      0.000    -15.000      0.000      0.000      0.000
+     27       0.000      0.000    -15.000      0.000      0.000      0.000
+     38       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     38     64
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     24       0.000      0.000    -15.000      0.000      0.000      0.000
+     25       0.000      0.000    -15.000      0.000      0.000      0.000
+     48       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     39     65
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+      6       0.000      0.000    -15.000      0.000      0.000      0.000
+      7       0.000      0.000    -15.000      0.000      0.000      0.000
+     31       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     40     66
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     48       0.000      0.000    -15.000      0.000      0.000      0.000
+     31       0.000      0.000    -15.000      0.000      0.000      0.000
+     52       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     41     67
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     38       0.000      0.000    -15.000      0.000      0.000      0.000
+     27       0.000      0.000    -15.000      0.000      0.000      0.000
+     39       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     42     68
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     15       0.000      0.000    -15.000      0.000      0.000      0.000
+     16       0.000      0.000    -15.000      0.000      0.000      0.000
+     40       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     43     69
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+      5       0.000      0.000    -15.000      0.000      0.000      0.000
+      6       0.000      0.000    -15.000      0.000      0.000      0.000
+     41       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     44     70
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+      8       0.000      0.000    -15.000      0.000      0.000      0.000
+     29       0.000      0.000    -15.000      0.000      0.000      0.000
+     42       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     45     71
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     27       0.000      0.000    -15.000      0.000      0.000      0.000
+     13       0.000      0.000    -15.000      0.000      0.000      0.000
+     43       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     46     72
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     14       0.000      0.000    -15.000      0.000      0.000      0.000
+     32       0.000      0.000    -15.000      0.000      0.000      0.000
+     43       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     47     73
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     31       0.000      0.000    -15.000      0.000      0.000      0.000
+      7       0.000      0.000    -15.000      0.000      0.000      0.000
+     42       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     48     74
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     32       0.000      0.000    -15.000      0.000      0.000      0.000
+     15       0.000      0.000    -15.000      0.000      0.000      0.000
+     40       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     49     75
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     29       0.000      0.000    -15.000      0.000      0.000      0.000
+      9       0.000      0.000    -15.000      0.000      0.000      0.000
+     44       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     50     76
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     19       0.000      0.000    -15.000      0.000      0.000      0.000
+     20       0.000      0.000    -15.000      0.000      0.000      0.000
+     50       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     51     77
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+      6       0.000      0.000    -15.000      0.000      0.000      0.000
+     31       0.000      0.000    -15.000      0.000      0.000      0.000
+     41       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     52     78
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+      9       0.000      0.000    -15.000      0.000      0.000      0.000
+     10       0.000      0.000    -15.000      0.000      0.000      0.000
+     44       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     53     79
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     37       0.000      0.000    -15.000      0.000      0.000      0.000
+     48       0.000      0.000    -15.000      0.000      0.000      0.000
+     52       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     54     80
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     36       0.000      0.000    -15.000      0.000      0.000      0.000
+     34       0.000      0.000    -15.000      0.000      0.000      0.000
+     51       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     55     81
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+      2       0.000      0.000    -15.000      0.000      0.000      0.000
+     11       0.000      0.000    -15.000      0.000      0.000      0.000
+     49       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     56     82
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     10       0.000      0.000    -15.000      0.000      0.000      0.000
+      2       0.000      0.000    -15.000      0.000      0.000      0.000
+     49       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     57     83
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     34       0.000      0.000    -15.000      0.000      0.000      0.000
+     39       0.000      0.000    -15.000      0.000      0.000      0.000
+     51       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     58     84
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     19       0.000      0.000    -15.000      0.000      0.000      0.000
+     40       0.000      0.000    -15.000      0.000      0.000      0.000
+     45       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     59     85
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     41       0.000      0.000    -15.000      0.000      0.000      0.000
+     25       0.000      0.000    -15.000      0.000      0.000      0.000
+     46       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     60     86
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     39       0.000      0.000    -15.000      0.000      0.000      0.000
+     34       0.000      0.000    -15.000      0.000      0.000      0.000
+     47       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     61     87
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     32       0.000      0.000    -15.000      0.000      0.000      0.000
+     40       0.000      0.000    -15.000      0.000      0.000      0.000
+     50       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     62     88
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     27       0.000      0.000    -15.000      0.000      0.000      0.000
+     43       0.000      0.000    -15.000      0.000      0.000      0.000
+     51       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     63     89
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     37       0.000      0.000    -15.000      0.000      0.000      0.000
+     24       0.000      0.000    -15.000      0.000      0.000      0.000
+     48       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     64     90
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     34       0.000      0.000    -15.000      0.000      0.000      0.000
+     35       0.000      0.000    -15.000      0.000      0.000      0.000
+     47       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     65     91
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     41       0.000      0.000    -15.000      0.000      0.000      0.000
+     31       0.000      0.000    -15.000      0.000      0.000      0.000
+     48       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     66     92
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     43       0.000      0.000    -15.000      0.000      0.000      0.000
+     36       0.000      0.000    -15.000      0.000      0.000      0.000
+     51       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     67     93
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     20       0.000      0.000    -15.000      0.000      0.000      0.000
+     30       0.000      0.000    -15.000      0.000      0.000      0.000
+     50       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     68     94
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     40       0.000      0.000    -15.000      0.000      0.000      0.000
+     16       0.000      0.000    -15.000      0.000      0.000      0.000
+     45       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     69     95
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+      5       0.000      0.000    -15.000      0.000      0.000      0.000
+     41       0.000      0.000    -15.000      0.000      0.000      0.000
+     46       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     70     96
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     35       0.000      0.000    -15.000      0.000      0.000      0.000
+     37       0.000      0.000    -15.000      0.000      0.000      0.000
+     52       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     71     97
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     11       0.000      0.000    -15.000      0.000      0.000      0.000
+     38       0.000      0.000    -15.000      0.000      0.000      0.000
+     49       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     72     98
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     39       0.000      0.000    -15.000      0.000      0.000      0.000
+     27       0.000      0.000    -15.000      0.000      0.000      0.000
+     51       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     73     99
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     44       0.000      0.000    -15.000      0.000      0.000      0.000
+     10       0.000      0.000    -15.000      0.000      0.000      0.000
+     49       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     74    100
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     38       0.000      0.000    -15.000      0.000      0.000      0.000
+     44       0.000      0.000    -15.000      0.000      0.000      0.000
+     49       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     75    101
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     31       0.000      0.000    -15.000      0.000      0.000      0.000
+     42       0.000      0.000    -15.000      0.000      0.000      0.000
+     52       0.000      0.000    -15.000      0.000      0.000      0.000
+# iface  loelf
+     76    102
+# lopof     prfac-s1   prfac-s2    prfac-n  prfac-ms2  prfac-ms1
+     42       0.000      0.000    -15.000      0.000      0.000      0.000
+     35       0.000      0.000    -15.000      0.000      0.000      0.000
+     52       0.000      0.000    -15.000      0.000      0.000      0.000
+
+### Uniformly distributed load in 3d frame or truss elements (loaded element
+### and load value) (local coordinate system)
+# iudis  loelu    udisl-x    udisl-y    udisl-z   udisl-tx   udisl-ty   udisl-tz
+
+### Thermal load (loaded point and temperature variation)
+# itemp  lopot     tempn
+
+### Prescribed variables (point, degree of freedom and prescribed value)
+### (global coordinate system)
+# iprva  nnodp  ndofp    prval
+
+# ===================================================================
+
+### Load case n.        2
+
+### Title of the load case
+Q
+
+### Load parameters
+    2 # nplod (n. of point loads in nodal points)
+    0 # ngrav (gravity load flag: 1-yes0-no)
+    0 # nedge (n. of edge loads) (F.E.M. only)
+    0 # nface (n. of face loads) (F.E.M. only)
+    0 # ntemp (n. of points with temperature variation) (F.E.M. only)
+   16 # nudis (n. of uniformly distributed loads (3d frames and trusses only)
+    0 # nepoi (n. of element point loads) (3d frames and trusses only)
+    0 # nprva (n. of prescribed and non zero degrees of freedom)
+
+### Gravity load (gravity acceleration)
+### (global coordinate system)
+#      gravi-x      gravi-y     gravi-z
+
+### Point loads in nodal points
+### (global coordinate system)
+# iplod  lopop    pload-x    pload-y    pload-z   pload-tx   pload-ty   pload-tz
+     1     1        0.000      0.000   -100.000      0.000      0.000      0.000
+     2     3        0.000      0.000   -100.000      0.000      0.000      0.000
+
+### Face load (loaded element, loaded points and load value)
+### (local coordinate system)
+
+### Uniformly distributed load in 3d frame or truss elements (loaded element
+### and load value) (local coordinate system)
+# iudis  loelu    udisl-x    udisl-y    udisl-z   udisl-tx   udisl-ty   udisl-tz
+     1     1        0.000      0.000    -20.000      0.000      0.000      0.000
+     2     2        0.000      0.000    -20.000      0.000      0.000      0.000
+     3     3        0.000      0.000    -20.000      0.000      0.000      0.000
+     4     4        0.000      0.000    -20.000      0.000      0.000      0.000
+     5     5        0.000      0.000    -20.000      0.000      0.000      0.000
+     6     6        0.000      0.000    -20.000      0.000      0.000      0.000
+     7     7        0.000      0.000    -20.000      0.000      0.000      0.000
+     8     8        0.000      0.000    -20.000      0.000      0.000      0.000
+     9     9        0.000      0.000    -20.000      0.000      0.000      0.000
+    10    10        0.000      0.000    -20.000      0.000      0.000      0.000
+    11    11        0.000      0.000    -20.000      0.000      0.000      0.000
+    12    12        0.000      0.000    -20.000      0.000      0.000      0.000
+    13    13        0.000      0.000    -20.000      0.000      0.000      0.000
+    14    14        0.000      0.000    -20.000      0.000      0.000      0.000
+    15    15        0.000      0.000    -20.000      0.000      0.000      0.000
+    16    16        0.000      0.000    -20.000      0.000      0.000      0.000
+
+### Thermal load (loaded point and temperature variation)
+# itemp  lopot     tempn
+
+### Prescribed variables (point, degree of freedom and prescribed value)
+### (global coordinate system)
+# iprva  nnodp  ndofp    prval
+
+END_OF_FILE

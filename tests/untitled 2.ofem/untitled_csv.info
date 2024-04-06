@@ -1,0 +1,179 @@
+
+o-------------------------------- O F E M C ----------------------------o
+|                                                                       |
+|                        Finite Element Analysis                        |
+|                          Displacement Method                          |
+|                           Linear  Behaviour                           |
+|                                                                       |
+| Release   0.1 (demonstration version)   Professional use not allowed  |
+| June 2023                               Language: C                   |
+|                                                                       |
+o-------------------------------- O F E M C ----------------------------o
+
+
+
+*** Main title of the problem
+
+/Users/paulocachim/MyFiles/github/xdfem/tests/untitled.msh
+
+*** Calculated parameters:
+
+* Stifness matrix
+
+N. of the element type =     7    Average elapsed time (sec.) =      0.000
+N. of the element type =     9    Average elapsed time (sec.) =      0.000
+
+* Solution algorithm parameters
+
+N. of variables in the mesh                      (ntotv) =        312
+N. of variables in the mesh (compacted)          (ntotc) =        241
+N. of columns of the half band                   (nhban) =        288
+N. of columns of the half band (compacted)       (nhbac) =        211
+N. of non-zero terms in stiffness matrix         (nnzte) =       1753
+
+Solution algorithm (direc/iterative)             (soalg) =          d
+Elapsed time (seconds)                           (rela1) =      0.000
+CPU time (seconds)                               (rcpu1) =      0.002
+
+  ======================
+
+Load case n.        1
+
+DEAD
+
+*** Element forces/stresses/resultant stresses
+            principal stresses/resultant stresses
+
+Frame element (3D):
+
+Generalized forces at the bar extremities:
+    (local coordinate system)
+    (same sign convention for both extremities)
+
+Element number (ielem)
+Element type (ntype)
+Node number (inode)
+X axial force (Nx)
+Y shear force (Vy)
+Z shear force (Vz)
+X torsion moment (Tx)
+Y bending moment (My)
+Z bending moment (Mz)
+
+ ielem  ntype  inode      coord ...
+          Nx                 Vy                 Vz
+          Tx                 My                 Mz
+
+ .............................................................
+
+Flat shell element:
+
+Resultant stresses in the Gauss points:
+    (local coordinate system)
+
+Element number (ielem)
+Element type (ntype)
+Gauss point number (igtst)
+Gauss point global coordinates (gpcot)
+X normal force (Nx)
+Y normal force (Ny)
+XY shear force (Nxy)
+ZX bending moment (Mzx)
+ZY bending moment (Mzy)
+XY twisting moment (Mxy)
+YZ shear force (Qyz)
+ZX shear force (Qzx)
+Principal membrane force (N1)
+Principal membrane force (N2)
+Angle of principal membrane force N1 with X axis - degrees (Angng)
+Principal bending moment (M1)
+Principal bending moment (M2)
+Angle of principal moment M1 with X axis - degrees (Angmg)
+
+ ielem  ntype  igtst      gpcot ...
+          Nx                 Ny                 Nxy
+          Mzx                Mzy                Mxy
+          Qyz                Qzx
+          N1                 N2                Angng
+          M1                 M2                Angmg
+
+ .............................................................
+
+
+Reaction sum
+
+        X1 direction      X2 direction     X3 direction
+      0.00000000         0.00000000           7.50000000
+
+  =======================================================================
+
+Load case n.        2
+
+Q
+
+*** Element forces/stresses/resultant stresses
+            principal stresses/resultant stresses
+
+Frame element (3D):
+
+Generalized forces at the bar extremities:
+    (local coordinate system)
+    (same sign convention for both extremities)
+
+Element number (ielem)
+Element type (ntype)
+Node number (inode)
+X axial force (Nx)
+Y shear force (Vy)
+Z shear force (Vz)
+X torsion moment (Tx)
+Y bending moment (My)
+Z bending moment (Mz)
+
+ ielem  ntype  inode      coord ...
+          Nx                 Vy                 Vz
+          Tx                 My                 Mz
+
+ .............................................................
+
+Flat shell element:
+
+Resultant stresses in the Gauss points:
+    (local coordinate system)
+
+Element number (ielem)
+Element type (ntype)
+Gauss point number (igtst)
+Gauss point global coordinates (gpcot)
+X normal force (Nx)
+Y normal force (Ny)
+XY shear force (Nxy)
+ZX bending moment (Mzx)
+ZY bending moment (Mzy)
+XY twisting moment (Mxy)
+YZ shear force (Qyz)
+ZX shear force (Qzx)
+Principal membrane force (N1)
+Principal membrane force (N2)
+Angle of principal membrane force N1 with X axis - degrees (Angng)
+Principal bending moment (M1)
+Principal bending moment (M2)
+Angle of principal moment M1 with X axis - degrees (Angmg)
+
+ ielem  ntype  igtst      gpcot ...
+          Nx                 Ny                 Nxy
+          Mzx                Mzy                Mxy
+          Qyz                Qzx
+          N1                 N2                Angng
+          M1                 M2                Angmg
+
+ .............................................................
+
+
+Reaction sum
+
+        X1 direction      X2 direction     X3 direction
+      0.00000000         0.00000000         240.00000000
+
+
+LAST LINE
