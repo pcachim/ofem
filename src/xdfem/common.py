@@ -19,6 +19,19 @@ ROTATION = 1001
 HOR_ROT = 1101
 VER_ROT = 1011
 
+from enum import Enum
+
+class Model(Enum):
+    Geometry = 1
+    Loads = 2
+
+class Entities(Enum):
+    Sections = 1
+    Materials = 2
+    Elements = 3
+    Types = 4
+    Groups = 5
+
 ofem_points = ['point']
 ofem_lines = ['line2', 'line3']
 ofem_areas = ['area3', 'area4', 'area6', 'area8', 'area9', 'area10']

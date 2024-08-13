@@ -7,6 +7,13 @@ import json, io
 from .. import common
 from .. import xfemmesh
 
+dim_types = {
+    0: 'point',
+    1: 'line',
+    2: 'area',
+    3: 'solid',
+}
+
 class Reader:
 
     def __init__(self, filename: str):
@@ -63,7 +70,7 @@ class Reader:
             df['type'] = ofem_etype
             self.ofem.elements = pd.concat([self.ofem.elements, df])
 
-        # SECTIONS, SUPPORTS
+        # SECTIONS, SUPPORTS, GROUPS
         for phys in physicalGroups:
             dim = phys[0]
             tag = phys[1]
@@ -72,7 +79,7 @@ class Reader:
                 secName = physName.split(":")[1].strip()
                 entities = gmsh.model.get_entities_for_physical_group(dim, tag)
                 elements = [gmsh.model.mesh.getElements(dim, i) for i in entities]
-                elements =[np.array(elements[i][1]) for i in range(len(elements))]
+                elements = [np.array(elements[i][1]) for i in range(len(elements))]
                 elements = np.concatenate(elements, axis=None).tolist()
                 df = pd.DataFrame({'element': elements})
                 df['element'] = df['element'].astype(str)
@@ -93,10 +100,50 @@ class Reader:
                 self.ofem.supports = pd.concat([self.ofem.supports, df])
                 ### verrificar se há nós repetidos
 
+            if physName.startswith("grp:"):
+                pass
+                grpName = physName.split(":")[1].strip()
+                # digit_list = [int(digit) for digit in supCode]
+                entities = gmsh.model.get_entities_for_physical_group(dim, tag)
+
+                elements = [gmsh.model.mesh.getElements(dim, i) for i in entities]
+                elements = [np.array(elements[i][1]) for i in range(len(elements))]
+                elements = np.concatenate(elements, axis=None).tolist()
+                df = pd.DataFrame({dim_types[dim]: elements})
+                df[dim_types[dim]] = df[dim_types[dim]].astype(str)
+                df['group'] = grpName
+                df.loc[:, 'element'] = common.gmsh_ofem_types[dim] + '-' + df.loc[:,[dim_types[dim]]]
+                self.ofem.groups = pd.concat([self.ofem.groups, df])
+
+                points = [gmsh.model.mesh.getNodes(dim, i) for i in entities]
+                points = [np.array(points[i][0]) for i in range(len(points))]
+                df = pd.DataFrame({'point': np.array(points).flatten()})
+                df['point'] = df['point'].astype(str)
+                df['group'] = grpName
+                self.ofem.groups = pd.concat([self.ofem.groups, df])
+
+            if physName.startswith("mat:"):
+                pass
+                # supCode = physName.split(":")[1].strip()
+                # digit_list = [int(digit) for digit in supCode]
+                # entities = gmsh.model.get_entities_for_physical_group(dim, tag)
+                # points = [gmsh.model.mesh.getNodes(dim, i) for i in entities]
+                # points = [np.array(points[i][0]) for i in range(len(points))]
+                # df = pd.DataFrame({'point': np.array(points).flatten()})
+                # df['point'] = df['point'].astype(str)
+                # df.loc[:, ['ux', 'uy', 'uz', 'rx', 'ry', 'rz']] = digit_list
+                # self.ofem.supports = pd.concat([self.ofem.supports, df])
+
         # SECTION PROPERTIES
         if "Sections" in attributes:
             sections = gmsh.model.get_attribute("Sections")
-            _list = [json.loads(sec.replace("'", "\"")) for sec in sections]
+            _list = []
+            for sec in sections:
+                s = sec.replace("'", "\"")
+                if not s.startswith('"'):
+                        s = f'"{s}"'
+                _list.append(json.loads(s))
+            # _list = [json.loads(sec.replace("'", "\"")) for sec in sections]
 
             json_buffer = io.BytesIO(json.dumps(_list).encode())
             json_buffer.seek(0)
@@ -167,21 +214,21 @@ class Reader:
                 self.ofem.area_loads = pd.concat([self.ofem.area_loads, df])
 
         # GROUPS
-        entities = gmsh.model.getEntities()
-        for ent in entities:
-            dim = ent[0]
-            tag = ent[1]
-            group_name = f'ent: {dim}:{tag}'
-            type_name = common.gmsh_ofem_types[dim]
+        # entities = gmsh.model.getEntities()
+        # for ent in entities:
+        #     dim = ent[0]
+        #     tag = ent[1]
+        #     group_name = f'ent: {dim}:{tag}'
+        #     type_name = common.gmsh_ofem_types[dim]
             
-            elementTypes, elementTags, nodeTags = gmsh.model.mesh.getElements(dim, tag)
+        #     elementTypes, elementTags, nodeTags = gmsh.model.mesh.getElements(dim, tag)
 
-            df = pd.DataFrame({type_name: np.array(elementTags[i])})
-            df[type_name] = df[type_name].astype(str)
-            if dim > 0:
-                df.loc[:, type_name] = type_name + '-' + df.loc[:,[type_name]]
-            df['group'] = group_name
+        #     df = pd.DataFrame({type_name: np.array(elementTags[i])})
+        #     df[type_name] = df[type_name].astype(str)
+        #     if dim > 0:
+        #         df.loc[:, type_name] = type_name + '-' + df.loc[:,[type_name]]
+        #     df['group'] = group_name
             
-            self.ofem.groups = pd.concat([self.ofem.groups, df])
+        #     self.ofem.groups = pd.concat([self.ofem.groups, df])
 
         return self.ofem

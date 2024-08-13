@@ -1,6 +1,7 @@
 DEBUG = True
 
 from . import common
+from .common import Model, Entities
 from .ofem.libofemc import OfemSolverFile
 from . import ofem
 from dataclasses import dataclass, field
@@ -30,6 +31,25 @@ SOLIDLOADS = 7
 LOADCASES = 8
 LOADCOMBINATIONS = 9
 GROUPS = 10
+
+elem_types = {
+    1: "STRE2D",
+    2: "STRA2D",
+    3: "AXIS2D",
+    4: "VOLUME",
+    5: "SLAB2D",
+    6: "SHELLC",
+    7: "FRAM3D",
+    8: "TRUS3D",
+    9: "FLATSH",
+    10: "FOUNDA",
+    11: "INTF1D",
+    12: "INTF2D",
+    13: "FR2DBN",
+    14: "FR2DTM",
+    15: "FR3DCO",
+    16: "TRUS2D",
+}
 
 def replace_bytesio_in_zip(zip_path, target_filename, new_contents):
     # Create a temporary filename for the new ZIP file
@@ -498,12 +518,13 @@ class xdfemStruct:
         path = Path(filename)
         if path.suffix != ".msh":
             filename = str(path.parent / (path.stem + ".msh"))
+        print(f"Writing file {filename}")
 
         # process options
         if model not in ['geometry', 'loads']:
             raise ValueError('model must be "geometry" or "loads"')
 
-        if entities not in ['groups', 'types', 'sections', 'materials']:
+        if entities not in ['groups', 'types', 'sections', 'materials', 'elements']:
             raise ValueError('entities must be "types", "sections" or "materials"')
 
         if DEBUG:
@@ -517,10 +538,13 @@ class xdfemStruct:
         gmsh.model.add(modelname)
         gmsh.model.setFileName(filename)
         
-        self.to_gmsh(model, entities)
-
+        if entities == 'elements':
+            self.to_gmsh_entities(model, 'sections')
+        else:
+            self.to_gmsh(model, entities)
+        attrs = gmsh.model.getAttribute("sections")
         # SAVE GEOMETRIC DATA
-        gmsh.option.setNumber("Mesh.SaveAll", 1)
+        gmsh.option.setNumber("Mesh.SaveAll", 0)
         gmsh.write(filename)
 
         if DEBUG:
@@ -541,8 +565,9 @@ class xdfemStruct:
             filename (str): the name of the file to be written
         """
         path = Path(filename)
-        if path.suffix != ".msh":
-            filename = str(path.parent / (path.stem + ".msh"))
+        # if path.suffix != ".msh":
+        #     filename = str(path.parent / (path.stem + ".msh"))
+        filename = str(path.parent / (path.stem + ".res.msh"))
 
         # process options
         if model not in ['geometry', 'loads']:
@@ -577,12 +602,14 @@ class xdfemStruct:
 
             if stresses_avg:
                 values = self._results.items['stresses_avg'].loc[self._results.items['stresses_avg']['icomb'] == i+1]
+                unique_values = values['elem_type'].unique()
                 list_of_dof = [col for col in values.columns if col.startswith('str')]
-                for idof in list_of_dof:
-                    view = gmsh.view.add(f'{case.case}: avg-{idof}')
-                    gmsh.view.addHomogeneousModelData(view, 0, modelname, "NodeData", values["point"].values, values[idof].values)
-                    gmsh.view.option.setNumber(view, "Visible", 0)
-                    gmsh.view.write(view, filename, append=True)
+                for itype in unique_values:
+                    for idof in list_of_dof:
+                        view = gmsh.view.add(f'{case.case}: avg-{elem_types[itype]}-{idof}')
+                        gmsh.view.addHomogeneousModelData(view, 0, modelname, "NodeData", values["point"].values, values[idof].values)
+                        gmsh.view.option.setNumber(view, "Visible", 0)
+                        gmsh.view.write(view, filename, append=True)
 
                 # DATA ELEMENTS
             if stresses_eln:
@@ -602,11 +629,13 @@ class xdfemStruct:
         # gmsh.fltk.run()
         gmsh.finalize()
 
-        mesh = meshio.read(filename)
-        
-        mesh = self.to_meshio()
-        filename = str(path.parent / (path.stem + ".vtu"))  
-        meshio.write(filename, mesh, file_format="vtu", binary=True)
+        # mesh = meshio.read(filename)
+        try:
+            filename = str(path.parent / (path.stem + ".res.vtu"))  
+            mesh = self.to_meshio()
+            meshio.write(filename, mesh, file_format="vtu", binary=True)
+        except:
+            print(f"Could not write {filename}")
 
         return
 
@@ -933,7 +962,7 @@ class xdfemStruct:
             self.save_xdfem(filename)
 
             if DEBUG:
-                logging.debug("\nCCopying 'xfem' file to 'zip' file.\n")
+                logging.debug("\nCopying 'xfem' file to 'zip' file.\n")
                 shutil.copyfile(filename, filename + ".zip")
         else:
             raise ValueError(f"File format {file_format} not recognized")
@@ -985,6 +1014,9 @@ class xdfemStruct:
 
         self.mesh.set_indexes()
         return
+    
+    def regen():
+        pass
 
     def solve(self):
         import uuid
@@ -1024,7 +1056,7 @@ class xdfemStruct:
 
         if DEBUG:
             logging.debug("\nFinishing calculating results.\n")
-            logging.debug("\nCCopying 'xfem' file to 'zip' file.\n")
+            logging.debug("\nCopying 'xfem' file to 'zip' file.\n")
             shutil.copyfile(filename + ".ofem", filename + ".ofem" + ".zip")
 
         return
@@ -1085,10 +1117,12 @@ class xdfemStruct:
             values = self._results.items['stresses_avg'].loc[self._results.items['stresses_avg']['icomb'] == i+1]
             values.loc[:,'point'] = values.loc[:,'point'].replace(to_replace=self.mesh._nodetag_to_id)
             values = values.sort_values(by='point')
+            unique_values = values['elem_type'].unique()
             list_of_dof = [col for col in values.columns if col.startswith('str')]
-            for idof in list_of_dof:
-                key = f'case: {case.case} % {idof}'
-                point_data[key] = values[idof].values
+            for itype in unique_values:
+                for idof in list_of_dof:
+                    key = f'{elem_types[itype]} - case: {case.case} % {idof}'
+                    point_data[key] = values[idof].values
 
             # values = self._results.items['stresses_eln'].loc[self._results.items['stresses_eln']['icomb'] == i+1]
             # list_of_dof = [col for col in values.columns if col.startswith('str')]
@@ -1112,6 +1146,131 @@ class xdfemStruct:
         # )
 
         return mesh
+
+    def to_gmsh_entities(self, model: str = 'geometry', entities: str = 'sections', meshsize = 0.8):
+
+        self.set_indexes()
+        self.mesh.set_points_elems_id(1)
+
+        joints = self.mesh.points.copy()
+        frames = self.mesh.elements.loc[self.mesh.elements['type'].isin(common.ofem_lines)].copy()
+        for etype in frames['type'].unique():
+            nlist = self.mesh.get_list_node_columns(etype)
+            for col in nlist:
+                frames[col] = joints.loc[frames[col].values, 'id'].values
+            frames['nodes'] = frames[nlist].values.tolist()
+
+        frames.loc[:,'section'] = self.element_sections.loc[:,'element'].apply(
+            lambda x: self.element_sections.at[x, 'section']
+            )
+        frames.loc[:,'material'] = frames.loc[:,'section'].apply(
+            lambda x: self.sections.at[x, 'material']
+            )
+        framesections = frames['section'].unique()
+        framematerials = frames['material'].unique()
+
+        areas = self.mesh.elements.loc[self.mesh.elements['type'].isin(common.ofem_areas)].copy()
+        for col in areas.columns:
+            if not col.startswith('node'):
+                continue
+            areas[col] = joints.loc[areas[col].values, 'id'].values
+        areas.loc[:,'section'] = self.element_sections.loc[:,'element'].apply(
+            lambda x: self.element_sections.at[x, 'section']
+            )
+        areas.loc[:,'material'] = areas.loc[:,'section'].apply(
+            lambda x: self.sections.at[x, 'material']
+            )
+        areasections = areas['section'].unique()
+        areamaterials = areas['material'].unique()
+
+        # JOINTS
+        # max_values = joints[['x', 'y', 'z']].max()
+        # min_values = joints[['x', 'y', 'z']].max()
+        
+        supps = self.supports
+        supps['point'] = supps['point'].astype(str)
+        supps['joined'] = supps[['ux', 'uy', 'uz', 'rx', 'ry', 'rz']].apply(lambda x: ''.join(map(str, x)), axis=1)
+        supp_types = supps['joined'].unique()
+        supp_nodes = supps['point'].values.tolist()
+
+        # add free nodes
+        joints['point'] = joints['id'].astype(str)
+        free_nodes = joints[~joints['point'].isin(supp_nodes)].copy()
+        list_of_nodes = []
+        for node in free_nodes.itertuples():
+            gmsh.model.geo.addPoint(node.x, node.y, node.z, meshSize=meshsize, tag=node.id)
+            list_of_nodes.append(node.id)
+        gmsh.model.geo.synchronize()
+
+        gmsh.model.geo.addPhysicalGroup(common.POINT, list_of_nodes, name="free nodes")
+
+        # add nodes for each type of support
+        for sup_type in supp_types:
+            supp_nodes = supps.loc[supps['joined'] == sup_type, 'point'].values.tolist()
+            free_nodes = joints.loc[joints['point'].isin(supp_nodes)].copy()
+            list_of_nodes = []
+            for node in free_nodes.itertuples():
+                gmsh.model.geo.addPoint(node.x, node.y, node.z, meshSize=meshsize, tag=node.id)
+                list_of_nodes.append(node.id)
+
+            gmsh.model.geo.synchronize()
+            gmsh.model.geo.addPhysicalGroup(common.POINT, list_of_nodes, name="sup: " + sup_type)
+            
+        phy = gmsh.model.getPhysicalGroups()
+
+        # ELEMENTS - FRAMES
+        logging.info(f"Processing frames ({self.mesh.num_elements})...")
+
+        # Adds each element as separate entity grouped by physical sections
+        for sec in framesections:
+            secframes = pd.DataFrame(frames.loc[frames['section']==sec])
+
+            list_of_frames = []
+            for elem in secframes.itertuples():
+                gmsh.model.geo.addLine(elem.node1, elem.node2, elem.id)                
+                list_of_frames.append(elem.id)
+
+            gmsh.model.geo.synchronize()
+            gmsh.model.geo.addPhysicalGroup(common.CURVE, list_of_frames, name="sec: " + sec)
+
+        # ELEMENTS - AREAS
+
+        for sec in areasections:
+            secareas = areas.loc[areas['section']==sec].copy()
+
+            list_of_areas = []
+            for i, elem in secareas.iterrows():
+                etype = elem['type']
+                nlist = self.mesh.get_list_node_columns(etype)
+                line_bound = []
+                for i in range(len(nlist)):
+                    tag = gmsh.model.geo.addLine(elem[nlist[i]], elem[nlist[(i+1)%len(nlist)]])
+                    line_bound.append(tag)
+                
+                bound = gmsh.model.geo.addCurveLoop(line_bound, tag=elem.id)
+                gmsh.model.geo.addPlaneSurface([bound], tag=elem.id)
+                list_of_areas.append(elem.id)
+
+            gmsh.model.geo.synchronize()
+            gmsh.model.geo.addPhysicalGroup(common.SURFACE, list_of_areas, name="sec: " + sec)
+
+        # ATTRIBUTES
+        attrbs = self.to_dict()
+        for key in attrbs:
+            s = [str(value) for value in attrbs[key]]
+            gmsh.model.set_attribute(key, s)
+
+        # data_list = self.supports.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        # gmsh.model.setAttribute("Supports", data_list)
+        # data_list = self.sections.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        # gmsh.model.setAttribute("Sections", data_list)
+        # data_list = self.materials.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        # gmsh.model.setAttribute("Materials", data_list)
+
+        gmsh.model.geo.synchronize()
+        # gmsh.model.mesh.generate(1)
+        # gmsh.model.mesh.generate(2)
+        return
 
     def to_gmsh(self, model: str = 'geometry', entities: str = 'sections'):
 
@@ -1196,11 +1355,32 @@ class xdfemStruct:
 
                 gmsh.model.addPhysicalGroup(common.CURVE, [line], name="sec: " + sec)
 
+        elif entities == 'elements':
+            # Adds each element as separate entity grouped by physical sections
+            for sec in framesections:
+                secframes = pd.DataFrame(frames.loc[frames['section']==sec])
+
+                list_of_frames = []
+                for elem in secframes.itertuples():
+                    etype = elem.type
+                    line = gmsh.model.addDiscreteEntity(common.CURVE)
+                    gmsh.model.setEntityName(common.CURVE, line, elem.element)
+                    nlist = self.mesh.get_list_node_columns(etype)
+                    frames2 = secframes.loc[frames['element'] == elem.element].copy()
+                    frames2['nodes'] = frames2[nlist].values.tolist()
+                    
+                    gmsh.model.mesh.addElementsByType(line, common.ofem_gmsh[etype], frames2['id'].to_list(), 
+                            frames2['nodes'].explode().to_list())
+
+                    list_of_frames.append(line)
+
+                gmsh.model.addPhysicalGroup(common.CURVE, list_of_frames, name="sec: " + sec)
+
         elif entities == 'materials':
             for mat in framematerials:
                 framesl = frames.loc[frames['material']==mat].copy()
                 line = gmsh.model.addDiscreteEntity(common.CURVE)
-                gmsh.model.setEntityName(common.URVE, line, mat)
+                gmsh.model.setEntityName(common.CURVE, line, mat)
                 lst = framesl['id'].to_list()
                 gmsh.model.mesh.addElementsByType(line, common.ofem_gmsh['line2'], lst, framesl['nodes'].explode().to_list())
 
@@ -1229,6 +1409,20 @@ class xdfemStruct:
                             areas3['nodes'].explode().to_list())
 
                 gmsh.model.addPhysicalGroup(common.SURFACE, [surf], name="sec: " + sec)
+
+        elif entities == 'elements':
+            for elem in areas.itertuples():
+                surf = gmsh.model.addDiscreteEntity(common.SURFACE)
+                gmsh.model.setEntityName(common.SURFACE, surf, elem.element)
+
+                etype = elem.type
+                nlist = self.mesh.get_list_node_columns(etype)
+                areas3 = areas.loc[areas['element'] == elem.element].copy()
+                areas3['nodes'] = areas3[nlist].values.tolist()
+                gmsh.model.mesh.addElementsByType(surf, common.ofem_gmsh[etype], areas3['id'].to_list(), 
+                        areas3['nodes'].explode().to_list())
+
+                gmsh.model.addPhysicalGroup(common.SURFACE, [surf], name="elm: " + elem.element)
 
         elif entities == 'materials':
 
@@ -1298,6 +1492,7 @@ class xdfemStruct:
 
         jobname = str(path.parent / (path.stem + ".ofem"))
         ofem_file = OfemSolverFile(jobname, overwrite=True)
+        print (f"Writing file {jobname}...")
 
         # nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes(2, includeBoundary=True)
         # coordlist = dict(zip(nodeTags, np.arange(len(nodeTags))))

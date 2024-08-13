@@ -775,7 +775,7 @@ class Reader:
         areasect = self.s2k['Area Section Properties'.upper()]
         areaassign = self.s2k['Area Section Assignments'.upper()]
         groups = self.s2k['Groups 1 - Definitions'.upper()]
-        groupsassign = self.s2k['Groups 2 - Assignments'.upper()]
+        # groupsassign = self.s2k['Groups 2 - Assignments'.upper()]
 
         logging.basicConfig(level=logging.DEBUG)
         logging.info("Writing GMSH file: %s", filename)
