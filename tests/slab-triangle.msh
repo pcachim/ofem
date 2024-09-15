@@ -247,26 +247,26 @@ $Elements
 104 31 42 52 
 105 42 35 52 
 $EndElements
-$AreaLoads
+$arealoads
 {'element': 1, 'loadcase': 'DEAD', 'px': 0.0, 'py': 0.0, 'pz': -15.0}
-$EndAreaLoads
-$LineLoads
+$Endarealoads
+$lineloads
 {'element': 1, 'loadcase': 'Q', 'fx': 0.0, 'fy': 0.0, 'fz': -20.0, 'mx': 0.0}
 {'element': 2, 'loadcase': 'Q', 'fx': 0.0, 'fy': 0.0, 'fz': -20.0, 'mx': 0.0}
-$EndLineLoads
-$LoadCases
+$Endlineloads
+$loadcases
 {'case': 'DEAD', 'type': 'dead', 'gravity': 1}
 {'case': 'Q', 'type': 'live', 'gravity': 0}
-$EndLoadCases
-$Materials
+$Endloadcases
+$materials
 {'material': 'concrete', 'type': 'isotropic', 'young': 30000000.0, 'poisson': 0.2, 'weight': 25.0, 'thermal': 1e-05, 'shear': 12500000.0}
 {'material': 'steel', 'type': 'isotropic', 'young': 200000000.0, 'poisson': 0.3, 'weight': 77.0, 'thermal': 1e-05, 'shear': 12500000.0}
-$EndMaterials
-$PointLoads
+$Endmaterials
+$pointloads
 {'point': 1, 'loadcase': 'DEAD', 'fx': 0.0, 'fy': 0.0, 'fz': -100.0, 'mx': 0.0, 'my': 0.0, 'mz': 0.0}
 {'point': 3, 'loadcase': 'DEAD', 'fx': 0.0, 'fy': 0.0, 'fz': -100.0, 'mx': 0.0, 'my': 0.0, 'mz': 0.0}
-$EndPointLoads
-$Sections
+$Endpointloads
+$sections
 {'section': 'beam', 'type': 'line', 'material': 'steel', 'area': 0.15, 'inertia2': 0.003, 'inertia3': 0.001, 'torsion': 1e-06, 'design': 0.0, 'angle': 0.0}
 {'section': 'slab', 'type': 'area', 'material': 'steel', 'thick': 0.25, 'design': 0.0, 'angle': 0.0}
-$EndSections
+$Endsections

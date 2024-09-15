@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.DEBUG)
 logging.debug("Test started.\n")
 
 fname = os.path.join( os.getcwd(), "tests/building-s2k.s2k")
-ofile = sap2000.Reader(fname).to_ofem_struct()
+ofile = sap2000.Reader(fname).to_xdfem_struct()
 
 xfile = "tests/building.xdfem"
 ofile.save(xfile)

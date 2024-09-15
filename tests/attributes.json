@@ -1,0 +1,10 @@
+{
+"materials": [
+    {"material": "C30/37", "type": "isotropic", "young": 33000000.0, "poisson": 0.2, "mass": 2.5485377, "shear": 13750000.0, "damping": 0.02, "thermal": 1e-05, "weight": 24.99261766},
+    {"material": "S355", "type": "isotropic", "young": 210000000.0, "poisson": 0.3, "mass": 7.84904737995992, "shear": 80769230.7692308, "damping": 0.02, "thermal": 1.17e-05, "weight": 76.9728639422648}
+    ],
+"sections": [
+    {"section": "FSEC1", "type": "line", "material": "S355", "design": "none", "area": 0.0042645076, "inertia3": 6.5724174702235e-05, "inertia2": 3.30125717301008e-06, "torsion": 9.65117678053953e-08, "angle": 0.0, "thick": "nan"},
+    {"section": "ASEC1", "type": "area", "material": "C30/37", "design": "none", "area": "nan", "inertia3": "nan", "inertia2": "nan", "torsion": "nan", "angle": 0.0, "thick": 0.25}
+    ]
+}

@@ -923,7 +923,7 @@ class Reader:
 
         return self._filename + ".msh"
 
-    def to_ofem_struct(self, model: str = 'geometry', entities: str = 'types', physicals: str = ''):
+    def to_xdfem_struct(self, model: str = 'geometry', entities: str = 'types', physicals: str = ''):
         """Writes a OFEM mesh file
 
         Args:

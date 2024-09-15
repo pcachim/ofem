@@ -1,11 +1,13 @@
 import gmsh
 import numpy as np
 import pandas as pd
-import pathlib
+import shutil, os
 from pathlib import Path
 import json, io
+import zipfile
 from .. import common
 from .. import xfemmesh
+from .. import replace_bytesio_in_zip
 
 dim_types = {
     0: 'point',
@@ -14,21 +16,234 @@ dim_types = {
     3: 'solid',
 }
 
-class Reader:
-
+class xdgeo:
+    
     def __init__(self, filename: str):
         self.tables = {}  # SAP2000 S2K file database
-        path = pathlib.Path(filename)
+        path = Path(filename)
         self._filename = str(path.parent / path.stem)
-        if not path.suffix == ".msh":
+        self._path = path.parent
+        if not path.suffix == ".xdgeo":
             raise ValueError("File extension not supported")
-        
+
         self._filename = str(path.parent / path.stem)
+
+        self._attributes = {}
+        # Extracts the .json file from .xdgeo file
+        fname = str(self._filename + ".xdgeo")
+        with zipfile.ZipFile(fname, 'r') as zip_file:
+            with zip_file.open('attributes.json') as json_file:
+                self._attributes = json.load(json_file)
+
+            # Extract the geometry.geo file
+            zip_file.extract(str("geometry.geo"), self._path)
+
+        # Opens the .geo file in gmsh
         gmsh.initialize()
-        self._msh = gmsh.open(self._filename + ".msh")
+        fname = str(path.parent / "geometry.geo")
+        gmsh.open(fname)
+
+        # Deletes the .geo file
+        os.remove(fname)
+        
+        # gmsh.fltk.run()
         return
 
-    def to_xdfem_struct(self):
+    @property
+    def attributes(self):
+        return self._attributes
+    
+    def to_gmsh_geo(self, model: xfemmesh.xdfemStruct, meshsize: float = 100000):
+        """Writes a .xdgeo file with each mesh element as an entity. 
+        If the file exists, replace the contents of the file. If the file does not exists, creates a new one
+
+        Args:
+            model (xfemmesh.xdfemStruct): the structural model
+            meshsize (float, optional): a number that specifies the mesh size.
+        """
+
+        model.set_indexes()
+        model.mesh.set_points_elems_id(1)
+
+        joints = model.mesh.points.copy()
+        frames = model.mesh.elements.loc[model.mesh.elements['type'].isin(common.ofem_lines)].copy()
+        for etype in frames['type'].unique():
+            nlist = model.mesh.get_list_node_columns(etype)
+            for col in nlist:
+                frames[col] = joints.loc[frames[col].values, 'id'].values
+            frames['nodes'] = frames[nlist].values.tolist()
+
+        frames.loc[:,'section'] = model.element_sections.loc[:,'element'].apply(
+            lambda x: model.element_sections.at[x, 'section']
+            )
+        frames.loc[:,'material'] = frames.loc[:,'section'].apply(
+            lambda x: model.sections.at[x, 'material']
+            )
+        framesections = frames['section'].unique()
+        framematerials = frames['material'].unique()
+
+        areas = model.mesh.elements.loc[model.mesh.elements['type'].isin(common.ofem_areas)].copy()
+        for col in areas.columns:
+            if not col.startswith('node'):
+                continue
+            areas[col] = joints.loc[areas[col].values, 'id'].values
+        areas.loc[:,'section'] = model.element_sections.loc[:,'element'].apply(
+            lambda x: model.element_sections.at[x, 'section']
+            )
+        areas.loc[:,'material'] = areas.loc[:,'section'].apply(
+            lambda x: model.sections.at[x, 'material']
+            )
+        areasections = areas['section'].unique()
+        areamaterials = areas['material'].unique()
+
+        # JOINTS
+        # max_values = joints[['x', 'y', 'z']].max()
+        # min_values = joints[['x', 'y', 'z']].max()
+        
+        supps = model.supports
+        supps['point'] = supps['point'].astype(str)
+        supps['joined'] = supps[['ux', 'uy', 'uz', 'rx', 'ry', 'rz']].apply(lambda x: ''.join(map(str, x)), axis=1)
+        supp_types = supps['joined'].unique()
+        supp_nodes = supps['point'].values.tolist()
+
+        joins_name_id = joints.set_index('point')['id'].to_dict()
+        joins_name_id = [{key: value} for key, value in joins_name_id.items()]
+
+        # add free nodes
+        joints['point'] = joints['id'].astype(str)
+        free_nodes = joints[~joints['point'].isin(supp_nodes)].copy()
+        list_of_nodes = []
+        for node in free_nodes.itertuples():
+            gmsh.model.geo.addPoint(node.x, node.y, node.z, meshSize=meshsize, tag=node.id)
+            list_of_nodes.append(node.id)
+            gmsh.model.geo.synchronize()
+            gmsh.model.mesh.addNodes(common.POINT, node.id, [node.id], [node.x, node.y, node.z])
+
+        gmsh.model.geo.addPhysicalGroup(common.POINT, list_of_nodes, name="free nodes")
+
+        # add nodes for each type of support
+        for sup_type in supp_types:
+            supp_nodes = supps.loc[supps['joined'] == sup_type, 'point'].values.tolist()
+            free_nodes = joints.loc[joints['point'].isin(supp_nodes)].copy()
+            list_of_nodes = []
+            for node in free_nodes.itertuples():
+                gmsh.model.geo.addPoint(node.x, node.y, node.z, meshSize=meshsize, tag=node.id)
+                list_of_nodes.append(node.id)
+
+                gmsh.model.geo.synchronize()
+                gmsh.model.mesh.addNodes(common.POINT, node.id, [node.id], [node.x, node.y, node.z])
+
+            gmsh.model.geo.addPhysicalGroup(common.POINT, list_of_nodes, name="sup: " + sup_type)
+            
+        # phy = gmsh.model.getPhysicalGroups()
+
+        # ELEMENTS - FRAMES
+        logging.info(f"Processing frames ({model.mesh.num_elements})...")
+
+        # Adds each element as separate entity grouped by physical sections
+        frames_dict = frames.set_index('element')['id'].to_dict()
+        for sec in framesections:
+            secframes = pd.DataFrame(frames.loc[frames['section']==sec])
+
+            list_of_frames = []
+            for elem in secframes.itertuples():
+                tag = gmsh.model.geo.addLine(elem.node1, elem.node2, elem.id)                
+                gmsh.model.geo.synchronize()
+                list_of_frames.append(elem.id)
+
+                etype = elem.type
+                gmsh.model.mesh.addElementsByType(tag, common.ofem_gmsh[etype], [elem.id], elem.nodes)
+
+            gmsh.model.addPhysicalGroup(common.CURVE, list_of_frames, name="sec: " + sec)
+
+        # ELEMENTS - AREAS
+
+        areas_dict = areas.set_index('element')['id'].to_dict()
+        for sec in areasections:
+            secareas = areas.loc[areas['section']==sec].copy()
+
+            list_of_areas = []
+            for i, elem in secareas.iterrows():
+                etype = elem['type']
+                nlist = model.mesh.get_list_node_columns(etype)
+                line_bound = []
+                for i in range(len(nlist)):
+                    tag = gmsh.model.geo.addLine(elem[nlist[i]], elem[nlist[(i+1)%len(nlist)]])
+                    line_bound.append(tag)
+                
+                bound = gmsh.model.geo.addCurveLoop(line_bound, tag=elem.id)
+                gmsh.model.geo.addPlaneSurface([bound], tag=elem.id)
+                
+                # new 
+                gmsh.model.geo.synchronize()
+                gmsh.model.mesh.addElementsByType(bound, common.ofem_gmsh[etype], [elem.id], elem[nlist].values.tolist()  )
+
+                list_of_areas.append(elem.id)
+
+            gmsh.model.geo.synchronize()
+            gmsh.model.addPhysicalGroup(common.SURFACE, list_of_areas, name="sec: " + sec)
+
+        elems_name_id = frames_dict | areas_dict
+        elems_name_id = [{key: value} for key, value in elems_name_id.items()]
+        
+        # ATTRIBUTES
+        attrbs = model.to_dict()
+        for key in attrbs:
+            s = [str(value) for value in attrbs[key]]
+            gmsh.model.set_attribute(key, s)
+
+        s = [str(value) for value in joins_name_id]
+        gmsh.model.set_attribute("joints_name_id", s)
+        s = [str(value) for value in elems_name_id]
+        gmsh.model.set_attribute("elements_name_id", s)
+
+        # data_list = model.supports.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        # gmsh.model.setAttribute("Supports", data_list)
+        # data_list = model.sections.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        # gmsh.model.setAttribute("Sections", data_list)
+        # data_list = model.materials.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
+        # gmsh.model.setAttribute("Materials", data_list)
+
+        gmsh.model.geo.synchronize()
+        # gmsh.model.mesh.generate(1)
+        # gmsh.model.mesh.generate(2)
+        # gmsh.fltk.run()
+
+        # SAVE geo
+        filename = self._filename + ".xdgeo"
+        gmsh.write("geometry.geo_unrolled")
+        shutil.copy("geometry.geo_unrolled", "geometry.geo")
+        os.remove("geometry.geo_unrolled")
+
+        files = self._to_dict()
+        json_data = json.dumps(files, indent=2).replace('NaN', 'null')
+
+        # Create an in-memory buffer
+        json_buffer = io.BytesIO(json_data.encode('utf-8'))
+        # Reset buffer position to the beginning
+        json_buffer.seek(0)
+        # Create a ZIP file in-memory and add the JSON buffer
+        if path.exists():
+            replace_bytesio_in_zip(filename, 'geometry.geo', json_buffer.read().decode('utf-8'))
+        else:
+            with zipfile.ZipFile(filename, 'w') as zip_file:
+                zip_file.write(filename, 'geometry.geo')    
+
+        return
+
+    def to_xdfem(self, meshsize: float = 100000) -> xfemmesh.xdfemStruct:
+        """Reads a .xdgeo geometry file and converts it to a xdfemstruct model.
+
+        Args:
+            meshsize (float, optional): a number that specifies the mesh size.
+        Returns:
+            xfemmesh.xdfemStruct: the structural model
+        """
+        model = xfemmesh.xdfemStruct()
+
+        return model
+
+    def to_xdgeo(self):
         
         # Read general mesh information
         nodeTags = gmsh.model.mesh.getNodes()
@@ -249,3 +464,29 @@ class Reader:
         #     self.ofem.groups = pd.concat([self.ofem.groups, df])
 
         return self.ofem
+
+
+        filename = self._filename
+        gmsh.write(str(filename) + ".geo_unrolled")
+        shutil.copy(str(filename) + ".geo_unrolled", str(filename) + ".geo")
+        os.remove(str(filename) + ".geo_unrolled")
+
+        path = Path(filename)
+        if path.suffix != ".xdfem":
+            filename = path.with_suffix(".xdfem")
+
+        files = self._to_dict()
+        json_data = json.dumps(files, indent=2).replace('NaN', 'null')
+
+        # Create an in-memory buffer
+        json_buffer = io.BytesIO(json_data.encode('utf-8'))
+        # Reset buffer position to the beginning
+        json_buffer.seek(0)
+        # Create a ZIP file in-memory and add the JSON buffer
+        if path.exists():
+            replace_bytesio_in_zip(filename, 'data.json', json_buffer.read().decode('utf-8'))
+        else:
+            with zipfile.ZipFile(filename, 'w') as zip_file:
+                zip_file.writestr('data.json', json_buffer.read().decode('utf-8'))    
+
+        return

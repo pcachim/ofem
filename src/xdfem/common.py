@@ -347,3 +347,28 @@ ofemstruct_tables = [
     "NodalLoads",
     "Information",
 ]
+
+import zipfile, os
+def replace_bytesio_in_zip(zip_path, target_filename, new_contents):
+    # Create a temporary filename for the new ZIP file
+    temp_zip_path = zip_path + ".temp"
+
+    # Open the existing ZIP file in read mode
+    with zipfile.ZipFile(zip_path, 'r') as existing_zip:
+        # Open the new ZIP file in write mode
+        with zipfile.ZipFile(temp_zip_path, 'w') as new_zip:
+            # Iterate through the existing files
+            for item in existing_zip.infolist():
+                # Skip the target file
+                if item.filename != target_filename:
+                    # Copy the existing file to the new ZIP file
+                    data = existing_zip.read(item.filename)
+                    new_zip.writestr(item, data)
+
+            # Add the new file to the ZIP file
+            new_zip.writestr(target_filename, new_contents)
+
+    # Replace the original ZIP file with the temporary one
+    os.replace(temp_zip_path, zip_path)
+
+

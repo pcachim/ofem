@@ -17,7 +17,7 @@ logging.debug("Test started.\n")
 #fname = os.path.join( os.getcwd(), "tests/test.s2k")
 fname = os.path.join( os.getcwd(), "tests/demo-s2k.s2k")
 
-off = sap2000handler.Reader(fname).to_ofem_struct()
+off = sap2000handler.Reader(fname).to_xdfem_struct()
 logging.debug("\nSaving xfem.\n")
 off.save("tests/test_2.xdfem")
 

@@ -35,5 +35,6 @@ mkdocs gh-deploy # to deploy it to *GitHub*
 
 ## Build and install on *pypi*
 
+update the version on `pyproject.toml` \
 python3 -m build \
-twine upload -u pcachim -p pacti6-qafhec-rarQen dist/*
+twine upload dist/*

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xdfem"
-version = "2024.3.4"
+version = "2024.8.2"
 requires-python = ">=3.9"
 authors = [
     {name = "Paulo Cachim", email = "pcachim@ua.pt"},

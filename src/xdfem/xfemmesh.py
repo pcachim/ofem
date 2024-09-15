@@ -497,7 +497,8 @@ class xdfemStruct:
         self._materials = pd.DataFrame(columns= ["material", "type"])
         self._elemsections = pd.DataFrame(columns= ["element", "section"])
         # LOADS
-        self._loadcases = pd.DataFrame(columns= ["loadcase", "type", "title"])
+        # self._loadcases = pd.DataFrame(columns= ["loadcase", "type", "title"])
+        self._loadcases = pd.DataFrame(columns= ["case", "type", "gravity"])
         self._loadcombinations = pd.DataFrame(columns= ["combination", "type", "title"])
         self._pointloads = pd.DataFrame(columns= ["point", "loadcase", "fx", "fy", "fz", "mx", "my", "mz"])
         self._lineloads = pd.DataFrame(columns= ["element", "loadcase", 'direction', "fx", "fy", "fz", "mx"])
@@ -546,6 +547,10 @@ class xdfemStruct:
         # SAVE GEOMETRIC DATA
         gmsh.option.setNumber("Mesh.SaveAll", 0)
         gmsh.write(filename)
+        
+        gmsh.write(str(filename) + ".geo_unrolled")
+        shutil.copy(str(filename) + ".geo_unrolled", str(filename) + ".geo")
+        os.remove(str(filename) + ".geo_unrolled")
 
         if DEBUG:
             logging.debug(f"Execution time: {round((timeit.default_timer() - starttime)*1000,3)} ms")
@@ -753,7 +758,7 @@ class xdfemStruct:
 
     @staticmethod
     def import_sap2000(filename: str):
-        return adapters.sap2000.Reader(filename).to_ofem_struct()
+        return adapters.sap2000.Reader(filename).to_xdfem_struct()
 
     @staticmethod
     def import_msh(filename: str):
@@ -1004,7 +1009,7 @@ class xdfemStruct:
             self._solidloads.set_index('ielement', inplace=True)
             self._dirty[SOLIDLOADS] = False
         if self._dirty[LOADCASES]:
-            self._loadcases['iloadcase'] = self._loadcases['loadcase'].copy()
+            self._loadcases['iloadcase'] = self._loadcases['case'].copy()
             self._loadcases.set_index('iloadcase', inplace=True)
             self._dirty[LOADCASES] = False
         if self._dirty[LOADCOMBINATIONS]:
@@ -1147,7 +1152,7 @@ class xdfemStruct:
 
         return mesh
 
-    def to_gmsh_entities(self, model: str = 'geometry', entities: str = 'sections', meshsize = 0.8):
+    def to_gmsh_entities(self, model: str = 'geometry', entities: str = 'sections', meshsize = 100000):
 
         self.set_indexes()
         self.mesh.set_points_elems_id(1)
@@ -1193,6 +1198,9 @@ class xdfemStruct:
         supp_types = supps['joined'].unique()
         supp_nodes = supps['point'].values.tolist()
 
+        joins_name_id = joints.set_index('point')['id'].to_dict()
+        joins_name_id = [{key: value} for key, value in joins_name_id.items()]
+
         # add free nodes
         joints['point'] = joints['id'].astype(str)
         free_nodes = joints[~joints['point'].isin(supp_nodes)].copy()
@@ -1200,7 +1208,8 @@ class xdfemStruct:
         for node in free_nodes.itertuples():
             gmsh.model.geo.addPoint(node.x, node.y, node.z, meshSize=meshsize, tag=node.id)
             list_of_nodes.append(node.id)
-        gmsh.model.geo.synchronize()
+            gmsh.model.geo.synchronize()
+            gmsh.model.mesh.addNodes(common.POINT, node.id, [node.id], [node.x, node.y, node.z])
 
         gmsh.model.geo.addPhysicalGroup(common.POINT, list_of_nodes, name="free nodes")
 
@@ -1213,28 +1222,35 @@ class xdfemStruct:
                 gmsh.model.geo.addPoint(node.x, node.y, node.z, meshSize=meshsize, tag=node.id)
                 list_of_nodes.append(node.id)
 
-            gmsh.model.geo.synchronize()
+                gmsh.model.geo.synchronize()
+                gmsh.model.mesh.addNodes(common.POINT, node.id, [node.id], [node.x, node.y, node.z])
+
             gmsh.model.geo.addPhysicalGroup(common.POINT, list_of_nodes, name="sup: " + sup_type)
             
-        phy = gmsh.model.getPhysicalGroups()
+        # phy = gmsh.model.getPhysicalGroups()
 
         # ELEMENTS - FRAMES
         logging.info(f"Processing frames ({self.mesh.num_elements})...")
 
         # Adds each element as separate entity grouped by physical sections
+        frames_dict = frames.set_index('element')['id'].to_dict()
         for sec in framesections:
             secframes = pd.DataFrame(frames.loc[frames['section']==sec])
 
             list_of_frames = []
             for elem in secframes.itertuples():
-                gmsh.model.geo.addLine(elem.node1, elem.node2, elem.id)                
+                tag = gmsh.model.geo.addLine(elem.node1, elem.node2, elem.id)                
+                gmsh.model.geo.synchronize()
                 list_of_frames.append(elem.id)
 
-            gmsh.model.geo.synchronize()
-            gmsh.model.geo.addPhysicalGroup(common.CURVE, list_of_frames, name="sec: " + sec)
+                etype = elem.type
+                gmsh.model.mesh.addElementsByType(tag, common.ofem_gmsh[etype], [elem.id], elem.nodes)
+
+            gmsh.model.addPhysicalGroup(common.CURVE, list_of_frames, name="sec: " + sec)
 
         # ELEMENTS - AREAS
 
+        areas_dict = areas.set_index('element')['id'].to_dict()
         for sec in areasections:
             secareas = areas.loc[areas['section']==sec].copy()
 
@@ -1249,16 +1265,29 @@ class xdfemStruct:
                 
                 bound = gmsh.model.geo.addCurveLoop(line_bound, tag=elem.id)
                 gmsh.model.geo.addPlaneSurface([bound], tag=elem.id)
+                
+                # new 
+                gmsh.model.geo.synchronize()
+                gmsh.model.mesh.addElementsByType(bound, common.ofem_gmsh[etype], [elem.id], elem[nlist].values.tolist()  )
+
                 list_of_areas.append(elem.id)
 
             gmsh.model.geo.synchronize()
-            gmsh.model.geo.addPhysicalGroup(common.SURFACE, list_of_areas, name="sec: " + sec)
+            gmsh.model.addPhysicalGroup(common.SURFACE, list_of_areas, name="sec: " + sec)
 
+        elems_name_id = frames_dict | areas_dict
+        elems_name_id = [{key: value} for key, value in elems_name_id.items()]
+        
         # ATTRIBUTES
         attrbs = self.to_dict()
         for key in attrbs:
             s = [str(value) for value in attrbs[key]]
             gmsh.model.set_attribute(key, s)
+
+        s = [str(value) for value in joins_name_id]
+        gmsh.model.set_attribute("joints_name_id", s)
+        s = [str(value) for value in elems_name_id]
+        gmsh.model.set_attribute("elements_name_id", s)
 
         # data_list = self.supports.apply(lambda row: ', '.join(map(str, row)), axis=1).tolist()
         # gmsh.model.setAttribute("Supports", data_list)
@@ -1270,6 +1299,7 @@ class xdfemStruct:
         gmsh.model.geo.synchronize()
         # gmsh.model.mesh.generate(1)
         # gmsh.model.mesh.generate(2)
+        # gmsh.fltk.run()
         return
 
     def to_gmsh(self, model: str = 'geometry', entities: str = 'sections'):
